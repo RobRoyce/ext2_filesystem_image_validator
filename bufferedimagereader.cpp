@@ -18,8 +18,8 @@ int BufferedImageReader::init()
 
     this->readSuperBlock();
 
-    this->blockSize = this->superBlock.s_log_block_size;
-    this->blockGroupSize = this->superBlock.s_log_block_size * this->superBlock.s_blocks_per_group;
+    this->blockSize = KiB << this->superBlock.s_log_block_size;
+    this->blockGroupSize = this->blockSize * this->superBlock.s_blocks_per_group;
 
     this->blockBuffer = new char[this->blockSize];
     this->blockGroupBuffer = new char[this->blockGroupSize];
