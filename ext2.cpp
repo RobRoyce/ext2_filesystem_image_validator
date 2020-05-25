@@ -1,75 +1,50 @@
 #include "ext2.hpp"
+#include "bufferedimagereader.hpp"
 
 
 EXT2::EXT2(char *filename) {
-  this->metaFileName = std::string(filename);
-  int rc = stat(filename, &this->metaFileStat);
-  if (rc != 0)
-    throw "Invalid File";
 
-  this->readSuperBlock();
-}
+  this->imReader = new BufferedImageReader(filename);
+  this->imReader->init();
 
-int EXT2::readSuperBlock() {
-  std::stringstream buffer;
-  std::ifstream fs(this->metaFileName, std::ios::binary | std::ios::in);
-  if (!fs)
-    return -1;
-
-  char buf[KiB * sizeof(char)];
-
-  fs.unsetf(std::ios::skipws);
-  fs.seekg(KiB, std::ios::beg);
-  fs.read(buf, KiB);
-
-  this->superBlock = (ext2_super_block*)buf;
-
-  if(debug)
-    this->printSuperBlock();
-
-  // -- Revision determines algorithm for lookup (hash map vs linked list)
-  // -- Revision 1:
-  // --- variable inode sizes
-  // --- extended attributesa
-  // --- Sparse SuperBlocks
-  
-  this->rev = this->superBlock->s_rev_level;
-
-  return 0;
+  printSuperBlock();
 }
 
 
-void EXT2::printSuperBlock() {
-  cout << "inodes count: " << this->superBlock->s_inodes_count << endl;
-  cout << "blocks count: " << this->superBlock->s_blocks_count << endl;
-  cout << "reserved blocks count: " << this->superBlock->s_r_blocks_count << endl;
-  cout << "free blocks count: " << this->superBlock->s_free_blocks_count << endl;
-  cout << "free inodes count: " << this->superBlock->s_free_inodes_count << endl;
-  cout << "first data block: " << this->superBlock->s_first_data_block << endl;
-  cout << "log block size: " << this->superBlock->s_log_block_size << endl;
-  cout << "log frag size: " << this->superBlock->s_log_frag_size << endl;
-  cout << "blocks per group: " << this->superBlock->s_blocks_per_group << endl;
-  cout << "frags per group: " << this->superBlock->s_frags_per_group << endl;
-  cout << "inodes per group: " << this->superBlock->s_inodes_per_group << endl;
-  cout << "mount time: " << this->superBlock->s_mtime << endl;
-  cout << "write time: " << this->superBlock->s_wtime << endl;
-  cout << "mount count: " << this->superBlock->s_mnt_count << endl;
-  cout << "max mount count: " << this->superBlock->s_max_mnt_count << endl;
-  cout << "magic signature: " << this->superBlock->s_magic << endl;
-  cout << "file system state: " << this->superBlock->s_state << endl;
-  cout << "errors: " << this->superBlock->s_errors << endl;
-  cout << "minor revision level: " << this->superBlock->s_minor_rev_level << endl;
-  cout << "time of last check: " << this->superBlock->s_lastcheck << endl;
-  cout << "max time between checks: " << this->superBlock->s_checkinterval << endl;
-  cout << "creator OS: " << this->superBlock->s_creator_os << endl;
-  cout << "revision level: " << this->superBlock->s_rev_level << endl;
-  cout << "default uid for reserved blocks: " << this->superBlock->s_def_resuid << endl;
-  cout << "default gid for reserved blocks: " << this->superBlock->s_def_resgid << endl;
-  cout << "first non-reserved inode: " << this->superBlock->s_first_ino << endl;
-  cout << "size of inode structure: " << this->superBlock->s_inode_size << endl;
-  cout << "compatible feature set: " << this->superBlock->s_feature_compat << endl;
-  cout << "incompatible feature set: " << this->superBlock->s_feature_incompat << endl;
-  cout << "readonly-compatible feature set: " << this->superBlock->s_feature_ro_compat << endl;
-  cout << "Reserved padding (size: " << sizeof(this->superBlock->s_reserved)
-       << "): " << this->superBlock->s_reserved << endl;
+void EXT2::printSuperBlock()
+{
+  struct ext2_super_block superBlock = this->imReader->getSuperBlock();
+
+  cout << "inodes count: " << superBlock.s_inodes_count << endl;
+  cout << "blocks count: " << superBlock.s_blocks_count << endl;
+  cout << "reserved blocks count: " << superBlock.s_r_blocks_count << endl;
+  cout << "free blocks count: " << superBlock.s_free_blocks_count << endl;
+  cout << "free inodes count: " << superBlock.s_free_inodes_count << endl;
+  cout << "first data block: " << superBlock.s_first_data_block << endl;
+  cout << "log block size: " << superBlock.s_log_block_size << endl;
+  cout << "log frag size: " << superBlock.s_log_frag_size << endl;
+  cout << "blocks per group: " << superBlock.s_blocks_per_group << endl;
+  cout << "frags per group: " << superBlock.s_frags_per_group << endl;
+  cout << "inodes per group: " << superBlock.s_inodes_per_group << endl;
+  cout << "mount time: " << superBlock.s_mtime << endl;
+  cout << "write time: " << superBlock.s_wtime << endl;
+  cout << "mount count: " << superBlock.s_mnt_count << endl;
+  cout << "max mount count: " << superBlock.s_max_mnt_count << endl;
+  cout << "magic signature: " << superBlock.s_magic << endl;
+  cout << "file system state: " << superBlock.s_state << endl;
+  cout << "errors: " << superBlock.s_errors << endl;
+  cout << "minor revision level: " << superBlock.s_minor_rev_level << endl;
+  cout << "time of last check: " << superBlock.s_lastcheck << endl;
+  cout << "max time between checks: " << superBlock.s_checkinterval << endl;
+  cout << "creator OS: " << superBlock.s_creator_os << endl;
+  cout << "revision level: " << superBlock.s_rev_level << endl;
+  cout << "default uid for reserved blocks: " << superBlock.s_def_resuid << endl;
+  cout << "default gid for reserved blocks: " << superBlock.s_def_resgid << endl;
+  cout << "first non-reserved inode: " << superBlock.s_first_ino << endl;
+  cout << "size of inode structure: " << superBlock.s_inode_size << endl;
+  cout << "compatible feature set: " << superBlock.s_feature_compat << endl;
+  cout << "incompatible feature set: " << superBlock.s_feature_incompat << endl;
+  cout << "readonly-compatible feature set: " << superBlock.s_feature_ro_compat << endl;
+  cout << "Reserved padding (size: " << sizeof(superBlock.s_reserved)
+       << "): " << superBlock.s_reserved << endl;
 }

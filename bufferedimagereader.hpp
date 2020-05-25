@@ -15,7 +15,7 @@ class BufferedImageReader : public ImageReader {
   BufferedImageReader(char*);
   ~BufferedImageReader();
 
-  virtual int init();
+  virtual void init();
 
   struct ext2_super_block *getSuperBlock();
 

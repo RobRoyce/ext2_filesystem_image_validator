@@ -1,7 +1,6 @@
 #include "bufferedimagereader.hpp"
 
 #include <sys/types.h>
-#include "ext2_fs.h"
 #include <filesystem>
 #include <iostream>
 #include <iterator>
@@ -12,7 +11,7 @@
 
 BufferedImageReader::BufferedImageReader(char *filename) : ImageReader(filename) {}
 
-int BufferedImageReader::init()
+void BufferedImageReader::init()
 {
     this->fs = new std::ifstream(this->metaFileName, std::ios::binary | std::ios::in);
 

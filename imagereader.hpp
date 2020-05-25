@@ -14,7 +14,7 @@ class ImageReader {
  public:
   ImageReader(char*);
 
-  virtual int init() = 0;
+  virtual void init() = 0;
 
   struct ext2_super_block &getSuperBlock();
 

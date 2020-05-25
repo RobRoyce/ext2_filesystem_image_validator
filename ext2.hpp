@@ -1,5 +1,6 @@
 #include <sys/types.h>
-#include "ext2_fs.h"
+//#include "ext2_fs.h"
+#include "imagereader.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -29,13 +30,7 @@ class EXT2 {
 
  private:
   // Member Variables
-  struct ext2_super_block *superBlock;
-  struct ext2_dir_entry *ext2DirEntry;
-  struct stat metaFileStat;
-  std::string metaFileName;
-  __u32 rev;
+  ImageReader *imReader;
 
-  // Methods
-  int readSuperBlock();
   void printSuperBlock();
 };
