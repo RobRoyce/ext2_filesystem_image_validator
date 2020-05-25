@@ -60,11 +60,11 @@ void EXT2::blockDump(size_t blockIdx)
 
   for(size_t i = 0; i < this->imReader->getBlockSize()/num_cols; ++i)
   {
-    std::cout << std::hex << std::setfill('0') << std::setw(4) << (i*num_rows) << ": ";
+    std::cout << std::hex << std::setfill('0') << std::setw(4) << (i*num_cols) << ": ";
     
-    for(size_t j = 0; j < num_rows; ++j)
+    for(size_t j = 0; j < num_cols; ++j)
     {
-      std::cout << std::hex << std::setfill('0') << std::setw(4) << block[num_rows*i + j] << " ";
+      std::cout << std::hex << std::setfill('0') << std::setw(4) << block[num_cols*i + j] << " ";
     }
     
     std::cout << std::endl;
