@@ -1,9 +1,11 @@
 #include <sys/types.h>
 #include "ext2_fs.h"
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <string.h>
 #include <sstream>
@@ -25,17 +27,25 @@ using std::string;
 // -------------------------------------------------- EXT2 Class
 class EXT2 {
  public:
-  EXT2(char *);
+   // Member Variables
+
+
+   // Methods
+   EXT2(char *);
+  ~EXT2();
+   int readSuperBlock();
+   int parseSuperBlock();
+   void printSuperBlock();
 
  private:
-  // Member Variables
-  struct ext2_super_block *superBlock;
-  struct ext2_dir_entry *ext2DirEntry;
-  struct stat metaFileStat;
-  std::string metaFileName;
-  __u32 rev;
-
-  // Methods
-  int readSuperBlock();
-  void printSuperBlock();
+   // Member Variables
+  std::shared_ptr<ext2_super_block> sblock;
+  ext2_super_block *superBlock;
+   // struct ext2_super_block *superBlock;
+   struct stat metaFileStat;
+   std::string metaFileName;
+   __u32 rev;
+  __u32 block_size;
+  __u32 inode_size;
+   // Methods
 };
