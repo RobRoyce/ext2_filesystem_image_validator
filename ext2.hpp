@@ -12,6 +12,7 @@
 
 
 #define KiB 1024
+#define SUPERBLOCK_SIZE sizeof(ext2_super_block)
 
 extern int debug;
 
@@ -20,22 +21,21 @@ using std::cin;
 using std::endl;
 using std::string;
 
-// -------------------------------------------------- Composite EXT2 Structure
-struct SuperBlock {
-  ext2_super_block sbCore;
-  unsigned int blockSize;
-  unsigned int totalSize;
-};
-
 
 // -------------------------------------------------- EXT2 Class
 class EXT2 {
  public:
   EXT2(char *);
-  unsigned int block_size();
+
  private:
-  struct SuperBlock superBlock;
+  // Member Variables
+  struct ext2_super_block *superBlock;
+  struct ext2_dir_entry *ext2DirEntry;
   struct stat metaFileStat;
   std::string metaFileName;
+  __u32 rev;
+
+  // Methods
   int readSuperBlock();
+  void printSuperBlock();
 };
