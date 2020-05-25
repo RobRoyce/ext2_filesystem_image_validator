@@ -53,9 +53,8 @@ void *BufferedImageReader::getBlock(size_t blockIdx)
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->unsetf(std::ios::skipws);
   fs->seekg(blockIdx * this->superBlock.s_log_block_size, std::ios::beg);
-  fs->read(this->blockBuffer, this->superBlock.s_log_block_size);
+  fs->read(this->blockBuffer, this->blockSize);
 
   return this->blockBuffer;
 }
@@ -65,9 +64,8 @@ void *BufferedImageReader::getBlockGroup(size_t blockGroupIdx)
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->unsetf(std::ios::skipws);
   fs->seekg((blockGroupIdx * this->blockGroupSize) + KiB, std::ios::beg);
-  fs->read(this->blockGroupBuffer, this->superBlock.s_log_block_size);
+  fs->read(this->blockGroupBuffer, this->blockGroupSize);
 
   return this->blockGroupBuffer;
 }
