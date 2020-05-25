@@ -33,4 +33,6 @@ class EXT2 {
   ImageReader *imReader;
 
   void printSuperBlock();
+
+  void blockDump(size_t);
 };

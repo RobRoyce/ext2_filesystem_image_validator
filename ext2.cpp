@@ -1,6 +1,8 @@
 #include "ext2.hpp"
 #include "bufferedimagereader.hpp"
 
+#include <iomanip>
+
 
 EXT2::EXT2(char *filename) {
 
@@ -8,6 +10,7 @@ EXT2::EXT2(char *filename) {
   this->imReader->init();
 
   printSuperBlock();
+  blockDump(1);
 }
 
 
@@ -47,4 +50,27 @@ void EXT2::printSuperBlock()
   cout << "readonly-compatible feature set: " << superBlock.s_feature_ro_compat << endl;
   cout << "Reserved padding (size: " << sizeof(superBlock.s_reserved)
        << "): " << superBlock.s_reserved << endl;
+}
+
+void EXT2::blockDump(size_t blockIdx)
+{
+  short *block = static_cast<short*>(this->imReader->getBlock(blockIdx));
+
+  static const size_t num_cols = 8;
+
+  for(size_t i = 0; i < this->imReader->getBlockSize()/num_cols; ++i)
+  {
+    std::cout << std::hex << std::setfill('0') << std::setw(4) << (i*num_rows) << ": ";
+    
+    for(size_t j = 0; j < num_rows; ++j)
+    {
+      std::cout << std::hex << std::setfill('0') << std::setw(4) << block[num_rows*i + j] << " ";
+    }
+    
+    std::cout << std::endl;
+
+  }
+  
+  std::cout << std::endl;
+
 }

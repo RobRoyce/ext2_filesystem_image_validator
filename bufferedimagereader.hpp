@@ -35,7 +35,5 @@ private:
 
   char *blockGroupBuffer;
 
-  size_t blockSize;
-  size_t blockGroupSize;
 
 };

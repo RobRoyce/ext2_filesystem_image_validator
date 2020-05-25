@@ -53,7 +53,7 @@ void *BufferedImageReader::getBlock(size_t blockIdx)
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->seekg(blockIdx * this->superBlock.s_log_block_size, std::ios::beg);
+  fs->seekg(blockIdx * this->blockSize, std::ios::beg);
   fs->read(this->blockBuffer, this->blockSize);
 
   return this->blockBuffer;

@@ -22,6 +22,10 @@ class ImageReader {
 
   virtual void *getBlockGroup(size_t) = 0;
 
+  size_t getBlockSize();
+
+  size_t getBlockGroupSize();
+
   static const size_t KiB=1024;
 
 protected:
@@ -33,6 +37,9 @@ protected:
   std::string metaFileName;
 
   __u32 rev;
+
+  size_t blockSize;
+  size_t blockGroupSize;
 
   virtual int readSuperBlock() = 0;
 };
