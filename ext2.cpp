@@ -32,11 +32,66 @@ EXT2::EXT2(char *filename) {
 
   if(!validateSuperBlock())
     throw runtime_error("SuperBlockInvalidError");
+
+  if(!getGroupDesc())
+    throw runtime_error("GroupDescriptionReadError");
 }
 
 // --------------------------------------------------Destructor
-EXT2::~EXT2() {}
+EXT2::~EXT2() {
+  fs.close();
+}
 
+bool EXT2::getGroupDesc() {
+  // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
+  const __u32 GDSIZE = sizeof(ext2_group_desc);
+  const __u32 DESC_TABLE_BLOCK = (meta->blockSize == KiB) ? 3 : 2;
+  const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
+  const __u32 DESC_TABLE_SZ = DESC_TABLE_LEN * GDSIZE; // each GD is 32 bytes
+  const unsigned BUFLEN = (GDSIZE * DESC_TABLE_LEN) / sizeof(char);
+
+  if (debug) {
+    printf("Group Descriptor Size: %d...\n", GDSIZE);
+    printf("Location of first Group Descriptor Table: Block %d...\n", DESC_TABLE_BLOCK);
+    printf("Total number of Group Descriptors: %d...\n", DESC_TABLE_LEN);
+    printf("Total size of Group Descriptor Table: %d...\n", DESC_TABLE_SZ);
+    printf("Size (in bytes) of buffer being used: %d...\n", BUFLEN);
+  }
+
+  char buf[BUFLEN];
+  try {
+    fs.seekg(DESC_TABLE_BLOCK * meta->blockSize, std::ios::beg);
+    fs.read(buf, DESC_TABLE_SZ);
+    if(!fs)
+      return false;
+  } catch(...) {
+    return false;
+  }
+
+  // buf now contains the entire block group descriptor table
+  // create group descriptor entires and append to the vector groupDescTbl
+  groupDescTbl = make_unique<vector<ext2_group_desc>>();
+  groupDescTbl->reserve(DESC_TABLE_LEN);
+
+  for (__u32 i = 0; i < DESC_TABLE_LEN; i++) {
+    unique_ptr<ext2_group_desc> tmp = make_unique<ext2_group_desc>();
+    if(memcpy(tmp.get(), &buf[i], sizeof(ext2_group_desc)) == nullptr)
+      return false;
+    groupDescTbl->push_back(std::move(*tmp));
+  }
+
+  if (debug) {
+    int i = 0;
+    for(auto groupDesc : *groupDescTbl) {
+      printf("-------------------------------------------------- Group Descriptor %d:\n", i++);
+      printDescTable(groupDesc);
+      printf("\n");
+    }
+  }
+
+
+  return true;
+}
 
 bool EXT2::getMetaFileInfo() {
   // TODO implementation
@@ -46,7 +101,7 @@ bool EXT2::getMetaFileInfo() {
 
 bool EXT2::readSuperBlock() {
   std::stringstream buffer;
-  std::ifstream fs(meta->filename, std::ios::binary | std::ios::in);
+  this->fs = std::ifstream(meta->filename, std::ios::binary | std::ios::in);
   if (!fs)
     return false;
 
@@ -130,7 +185,7 @@ bool EXT2::parseSuperBlock() {
 
   switch(meta->rev) {
     case EXT2_OLD_REV:
-      
+
       break;
     case EXT2_DYNAMIC_REV:
       meta->inodeSize = superBlock->s_inode_size;
@@ -156,44 +211,55 @@ void EXT2::printSuperBlock() {
          );
 
 
-  // TODO: Remove everything below
-  cout << "inodes count: " << superBlock->s_inodes_count << endl;
-  cout << "blocks count: " << superBlock->s_blocks_count << endl;
-  cout << "reserved blocks count: " << superBlock->s_r_blocks_count << endl;
-  cout << "free blocks count: " << superBlock->s_free_blocks_count << endl;
-  cout << "free inodes count: " << superBlock->s_free_inodes_count << endl;
-  cout << "first data block: " << superBlock->s_first_data_block << endl;
-  cout << "log block size: " << superBlock->s_log_block_size << endl;
-  cout << "log frag size: " << superBlock->s_log_frag_size << endl;
-  cout << "blocks per group: " << superBlock->s_blocks_per_group << endl;
-  cout << "frags per group: " << superBlock->s_frags_per_group << endl;
-  cout << "inodes per group: " << superBlock->s_inodes_per_group << endl;
-  cout << "mount time: " << superBlock->s_mtime << endl;
-  cout << "write time: " << superBlock->s_wtime << endl;
-  cout << "mount count: " << superBlock->s_mnt_count << endl;
-  cout << "max mount count: " << superBlock->s_max_mnt_count << endl;
-  cout << "magic signature: " << superBlock->s_magic << endl;
-  cout << "file system state: " << superBlock->s_state << endl;
-  cout << "errors: " << superBlock->s_errors << endl;
-  cout << "minor revision level: " << superBlock->s_minor_rev_level << endl;
-  cout << "time of last check: " << superBlock->s_lastcheck << endl;
-  cout << "max time between checks: " << superBlock->s_checkinterval << endl;
-  cout << "creator OS: " << superBlock->s_creator_os << endl;
-  cout << "revision level: " << superBlock->s_rev_level << endl;
-  cout << "default uid for reserved blocks: " << superBlock->s_def_resuid << endl;
-  cout << "default gid for reserved blocks: " << superBlock->s_def_resgid << endl;
-  cout << "first non-reserved inode: " << superBlock->s_first_ino << endl;
-  cout << "size of inode structure: " << superBlock->s_inode_size << endl;
-  cout << "compatible feature set: " << superBlock->s_feature_compat << endl;
-  cout << "incompatible feature set: " << superBlock->s_feature_incompat << endl;
-  cout << "readonly-compatible feature set: " << superBlock->s_feature_ro_compat << endl;
-  cout << "Reserved padding (size: " << sizeof(superBlock->s_reserved)
-       << "): " << superBlock->s_reserved << endl;
+  // // TODO: Remove everything below
+  // if (debug) {
+  //   cout << "inodes count: " << superBlock->s_inodes_count << endl;
+  //   cout << "blocks count: " << superBlock->s_blocks_count << endl;
+  //   cout << "reserved blocks count: " << superBlock->s_r_blocks_count << endl;
+  //   cout << "free blocks count: " << superBlock->s_free_blocks_count << endl;
+  //   cout << "free inodes count: " << superBlock->s_free_inodes_count << endl;
+  //   cout << "first data block: " << superBlock->s_first_data_block << endl;
+  //   cout << "log block size: " << superBlock->s_log_block_size << endl;
+  //   cout << "log frag size: " << superBlock->s_log_frag_size << endl;
+  //   cout << "blocks per group: " << superBlock->s_blocks_per_group << endl;
+  //   cout << "frags per group: " << superBlock->s_frags_per_group << endl;
+  //   cout << "inodes per group: " << superBlock->s_inodes_per_group << endl;
+  //   cout << "mount time: " << superBlock->s_mtime << endl;
+  //   cout << "write time: " << superBlock->s_wtime << endl;
+  //   cout << "mount count: " << superBlock->s_mnt_count << endl;
+  //   cout << "max mount count: " << superBlock->s_max_mnt_count << endl;
+  //   cout << "magic signature: " << superBlock->s_magic << endl;
+  //   cout << "file system state: " << superBlock->s_state << endl;
+  //   cout << "errors: " << superBlock->s_errors << endl;
+  //   cout << "minor revision level: " << superBlock->s_minor_rev_level << endl;
+  //   cout << "time of last check: " << superBlock->s_lastcheck << endl;
+  //   cout << "max time between checks: " << superBlock->s_checkinterval << endl;
+  //   cout << "creator OS: " << superBlock->s_creator_os << endl;
+  //   cout << "revision level: " << superBlock->s_rev_level << endl;
+  //   cout << "default uid for reserved blocks: " << superBlock->s_def_resuid
+  //        << endl;
+  //   cout << "default gid for reserved blocks: " << superBlock->s_def_resgid
+  //        << endl;
+  //   cout << "first non-reserved inode: " << superBlock->s_first_ino << endl;
+  //   cout << "size of inode structure: " << superBlock->s_inode_size << endl;
+  //   cout << "compatible feature set: " << superBlock->s_feature_compat << endl;
+  //   cout << "incompatible feature set: " << superBlock->s_feature_incompat
+  //        << endl;
+  //   cout << "readonly-compatible feature set: "
+  //        << superBlock->s_feature_ro_compat << endl;
+  //   cout << "Reserved padding (size: " << sizeof(superBlock->s_reserved)
+  //        << "): " << superBlock->s_reserved << endl;
+  // }
 }
 
 
 void EXT2::printGroupSummary() {
-
+  // int i = 0;
+  for(auto groupDesc : *groupDescTbl) {
+    // printf("GROUP,%d,%d,%d,%d,%d,%d,%d,%d\n");
+    printDescTable(groupDesc);
+    continue; // TODO
+  }
 }
 
 void EXT2::printFreeBlockEntries(){}
@@ -228,15 +294,6 @@ bool EXT2::validateSuperBlock() {
     default: // Error
       return false;
   }
-
-  // Block size can be calculated in two ways. First, it should be the total
-  // file size divided by the number of blocks (file.size /
-  // superBlock.blockCount) Second, it can be found explicitly using (blockSize
-  // = 1024 << log_block_size) We can use this for validatiion purposes.
-  __u32 blockSize1 = meta->stat.st_size / superBlock->s_blocks_count;
-  __u32 blockSize2 = KiB << superBlock->s_log_block_size;
-  if (blockSize1 != blockSize2)
-    return false;
 
   return true;
 }
