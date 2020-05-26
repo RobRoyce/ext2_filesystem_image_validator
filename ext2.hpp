@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #include "imagereader.hpp"
 #include "metafile.hpp"
 #include <filesystem>
@@ -6,12 +5,12 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <string>
-#include <string.h>
 #include <sstream>
+#include <string.h>
+#include <string>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
-
 
 #define KiB 1024
 #define SUPERBLOCK_SIZE sizeof(ext2_super_block)
@@ -73,6 +72,7 @@ class EXT2 {
   bool readSuperBlock(); // validate and populate superBlock
   bool parseSuperBlock(); // validate and populate metaFile
 
+  // Top Level Reporting Methods
   void printSuperBlock();
   void printGroupSummary();
   void printFreeBlockEntries();
@@ -80,30 +80,17 @@ class EXT2 {
   void printInodeSummary();
   void printDirectoryEntries();
   void printIndirectBlockRefs();
-  void printDescTable(struct ext2_group_desc gd) {
-    printf("Block Bitmap: %x...\n", gd.bg_block_bitmap);
-    printf("Inode Bitmap: %x...\n", gd.bg_inode_bitmap);
-    printf("Inode Table: %x...\n", gd.bg_inode_table);
-    printf("Free Block Count: %x...\n", gd.bg_free_blocks_count);
-    printf("Free Inodes Count: %x...\n", gd.bg_free_inodes_count);
-    printf("Used Dirs Count: %x...\n", gd.bg_used_dirs_count);
-    printf("Padding: %x...\n", gd.bg_pad);
-    printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
-  }
-
 
  private:
   // Member Variables
-  ImageReader *imReader;
-
-  unique_ptr<vector<ext2_group_desc>> groupDescTbl;
+  unique_ptr<ImageReader> imReader = nullptr;
   unique_ptr<MetaFile> meta = nullptr;
+  unique_ptr<vector<ext2_group_desc>> groupDescTbl;
 
   // Methods
-
   void blockDump(size_t);
-
   bool getMetaFileInfo();
-  bool getGroupDesc();
+  bool getGroupDescTbl();
   bool validateSuperBlock();
+  void printDescTable(struct ext2_group_desc);
 };

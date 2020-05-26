@@ -1,6 +1,5 @@
 #include "ext2.hpp"
 #include "bufferedimagereader.hpp"
-
 #include <iomanip>
 
 EXT2::EXT2(char *filename) {
@@ -18,8 +17,9 @@ EXT2::EXT2(char *filename) {
     throw runtime_error("FileSystemReadError");
 
   // -------------------------------------------------- Init Reader and Super Block
-
-  imReader = new BufferedImageReader(meta.get());
+  // slightly hacky way to use smart pointers with polymorphism (improvements welcomed)
+  unique_ptr<ImageReader> base(new BufferedImageReader(meta.get()));
+  imReader = std::move(base);
   imReader->init(); // Automatically initializes the super block
 
   if (!parseSuperBlock())
@@ -32,14 +32,15 @@ EXT2::EXT2(char *filename) {
   if(!validateSuperBlock())
     throw runtime_error("SuperBlockInvalidError");
 
-  if(!getGroupDesc())
+  // -------------------------------------------------- Populate Group Descriptor Table
+  if(!getGroupDescTbl())
     throw runtime_error("GroupDescriptionReadError");
 }
 
 // --------------------------------------------------Destructor
 EXT2::~EXT2() {}
 
-bool EXT2::getGroupDesc() {
+bool EXT2::getGroupDescTbl() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
   const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
 
@@ -219,7 +220,7 @@ void EXT2::printDirectoryEntries(){}
 void EXT2::printIndirectBlockRefs(){}
 
 
-
+/*PRIVATE*/
 bool EXT2::validateSuperBlock() {
 
   ext2_super_block *superBlock = this->imReader->getSuperBlock();
@@ -249,4 +250,17 @@ bool EXT2::validateSuperBlock() {
   }
 
   return true;
+}
+
+
+/*PRIVATE*/
+void EXT2::printDescTable(struct ext2_group_desc gd) {
+  printf("Block Bitmap: %x...\n", gd.bg_block_bitmap);
+  printf("Inode Bitmap: %x...\n", gd.bg_inode_bitmap);
+  printf("Inode Table: %x...\n", gd.bg_inode_table);
+  printf("Free Block Count: %x...\n", gd.bg_free_blocks_count);
+  printf("Free Inodes Count: %x...\n", gd.bg_free_inodes_count);
+  printf("Used Dirs Count: %x...\n", gd.bg_used_dirs_count);
+  printf("Padding: %x...\n", gd.bg_pad);
+  printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
 }

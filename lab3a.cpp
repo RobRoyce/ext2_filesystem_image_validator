@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
   // -------------------------------------------------- Generate Reports
   ext2->printSuperBlock(); // DONE
-  ext2->printGroupSummary(); // DONE
+  ext2->printGroupSummary(); // STARTED
   ext2->printFreeBlockEntries();
   ext2->printFreeInodeEntries();
   ext2->printInodeSummary();
