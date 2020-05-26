@@ -215,14 +215,7 @@ void EXT2::printGroupSummary() {
   __u32 GS9 = 0;
 
   for (auto groupDesc : *groupDescTbl) {
-    if (GS2 == GROUP_COUNT - 1)
-      // Calculation required, since this might not be a full group
-      // (file.size - bytes from full groups) / blocksize
-      GS3 = (meta->stat.st_size - ((GROUP_COUNT - 1) * meta->blockGroupSize)) /
-            meta->blockSize;
-    else
-      GS3 = meta->blocksPerGroup;
-
+    GS3 = (GS2 == GROUP_COUNT-1) ? blocksInLastGroup() : meta->blocksPerGroup;
     GS5 = groupDesc.bg_free_blocks_count;
     GS6 = groupDesc.bg_free_inodes_count;
     GS7 = groupDesc.bg_block_bitmap;
@@ -234,7 +227,12 @@ void EXT2::printGroupSummary() {
   }
 }
 
-void EXT2::printFreeBlockEntries(){}
+void EXT2::printFreeBlockEntries(){
+  __u32 FB2 = 0;
+
+  printf("BFREE,%d\n", FB2);
+}
+
 void EXT2::printFreeInodeEntries(){}
 void EXT2::printInodeSummary(){}
 void EXT2::printDirectoryEntries(){}
@@ -284,4 +282,12 @@ void EXT2::printDescTable(struct ext2_group_desc gd) {
   printf("Used Dirs Count: %x...\n", gd.bg_used_dirs_count);
   printf("Padding: %x...\n", gd.bg_pad);
   printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
+}
+
+__u32 EXT2::blocksInLastGroup() {
+  __u32 size = meta->stat.st_size;
+  __u32 fullGroupsCount = groupDescTbl->size() - 1;
+  __u32 groupSize = meta->blockGroupSize;
+  __u32 blockSize = meta->blockSize;
+  return (size - (fullGroupsCount * groupSize)) / blockSize;
 }

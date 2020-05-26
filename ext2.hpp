@@ -93,4 +93,5 @@ class EXT2 {
   bool getGroupDescTbl();
   bool validateSuperBlock();
   void printDescTable(struct ext2_group_desc);
+  __u32 blocksInLastGroup();
 };
