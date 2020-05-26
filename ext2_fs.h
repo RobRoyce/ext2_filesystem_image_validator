@@ -93,7 +93,7 @@ struct ext2_inode {
 	__u16	i_links_count;	/* Links count */
 	__u32	i_blocks;	/* Blocks count */
 	__u32	i_flags;	/* File flags */
-	__u32   i_reserved1;
+	__u32 i_reserved1;
 
 	__u32	i_block[EXT2_N_BLOCKS];/* Pointers to blocks */
 	__u32	i_version;	/* File version (for NFS) */
