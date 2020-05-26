@@ -12,7 +12,7 @@
 //
 class BufferedImageReader : public ImageReader {
  public:
-  BufferedImageReader(char*);
+  BufferedImageReader(MetaFile*);
   ~BufferedImageReader();
 
   virtual void init();
@@ -22,6 +22,8 @@ class BufferedImageReader : public ImageReader {
   virtual void *getBlock(size_t);
 
   virtual void *getBlockGroup(size_t);
+
+  virtual void *getGroupDescriptor();
 
 protected:
 
@@ -35,5 +37,6 @@ private:
 
   char *blockGroupBuffer;
 
+  char *groupDescriptorBuffer;
 
 };

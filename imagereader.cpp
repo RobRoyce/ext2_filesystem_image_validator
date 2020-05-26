@@ -1,18 +1,14 @@
 #include "imagereader.hpp"
 
-ImageReader::ImageReader(char *filename) {
+ImageReader::ImageReader(MetaFile *metafile) {
 
-  this->metaFileName = std::string(filename);
-  int rc = stat(filename, &this->metaFileStat);
-
-  if (rc != 0)
-    throw "Invalid File";
+  this->meta = metafile;
 
 }
 
-struct ext2_super_block &ImageReader::getSuperBlock()
+struct ext2_super_block *ImageReader::getSuperBlock()
 {
-  return this->superBlock;
+  return &this->superBlock;
 }
 
 size_t ImageReader::getBlockSize()

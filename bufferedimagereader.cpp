@@ -9,11 +9,11 @@
 #include <sstream>
 #include <sys/stat.h>
 
-BufferedImageReader::BufferedImageReader(char *filename) : ImageReader(filename) {}
+BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metafile) {}
 
 void BufferedImageReader::init()
 {
-    this->fs = new std::ifstream(this->metaFileName, std::ios::binary | std::ios::in);
+    this->fs = new std::ifstream(this->meta->filename, std::ios::binary | std::ios::in);
 
     this->readSuperBlock();
 
@@ -22,10 +22,11 @@ void BufferedImageReader::init()
 
     this->blockBuffer = new char[this->blockSize];
     this->blockGroupBuffer = new char[this->blockGroupSize];
+
+    this->groupDescriptorBuffer = new char[KiB];
 }
 
 int BufferedImageReader::readSuperBlock() {
-  //std::stringstream buffer;
 
   if (!fs)
     return -1;
@@ -43,7 +44,7 @@ int BufferedImageReader::readSuperBlock() {
   // --- extended attributesa
   // --- Sparse SuperBlocks
   
-  this->rev = this->superBlock.s_rev_level;
+  this->meta->rev = this->superBlock.s_rev_level;
 
   return 0;
 }
@@ -68,4 +69,27 @@ void *BufferedImageReader::getBlockGroup(size_t blockGroupIdx)
   fs->read(this->blockGroupBuffer, this->blockGroupSize);
 
   return this->blockGroupBuffer;
+}
+
+void *BufferedImageReader::getGroupDescriptor()
+{
+  // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
+  const __u32 GDSIZE = sizeof(ext2_group_desc);
+  const __u32 DESC_TABLE_BLOCK = (meta->blockSize == KiB) ? 3 : 2;
+  const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
+  const __u32 DESC_TABLE_SZ = DESC_TABLE_LEN * GDSIZE; // each GD is 32 bytes
+  const unsigned BUFLEN = (GDSIZE * DESC_TABLE_LEN) / sizeof(char);
+
+  if (debug) {
+    printf("Group Descriptor Size: %d...\n", GDSIZE);
+    printf("Location of first Group Descriptor Table: Block %d...\n", DESC_TABLE_BLOCK);
+    printf("Total number of Group Descriptors: %d...\n", DESC_TABLE_LEN);
+    printf("Total size of Group Descriptor Table: %d...\n", DESC_TABLE_SZ);
+    printf("Size (in bytes) of buffer being used: %d...\n", BUFLEN);
+  }
+
+  fs->seekg(DESC_TABLE_BLOCK * meta->blockSize, std::ios::beg);
+  fs->read(this->groupDescriptorBuffer, DESC_TABLE_SZ);
+  
+  return this->groupDescriptorBuffer;
 }

@@ -5,6 +5,9 @@
 #include <string>
 
 #include "ext2_fs.h"
+#include "metafile.hpp"
+
+extern int debug;
 
 // -------------------------------------------------- EXT2 Image Reader Class
 //
@@ -12,15 +15,17 @@
 //
 class ImageReader {
  public:
-  ImageReader(char*);
+  ImageReader(MetaFile*);
 
   virtual void init() = 0;
 
-  struct ext2_super_block &getSuperBlock();
+  struct ext2_super_block *getSuperBlock();
 
   virtual void *getBlock(size_t) = 0;
 
   virtual void *getBlockGroup(size_t) = 0;
+
+  virtual void *getGroupDescriptor() = 0;
 
   size_t getBlockSize();
 
@@ -33,10 +38,7 @@ protected:
   struct ext2_super_block superBlock;
   struct ext2_dir_entry *ext2DirEntry;
 
-  struct stat metaFileStat;
-  std::string metaFileName;
-
-  __u32 rev;
+  MetaFile *meta = nullptr;
 
   size_t blockSize;
   size_t blockGroupSize;

@@ -4,7 +4,7 @@
 
 .PHONY: mount clean dist
 
-CC = g++-8
+CC = g++
 CFLAGS = -Wall -Wextra -std=gnu++17
 DEPENDENCIES.C = utils.c ext2.cpp imagereader.cpp bufferedimagereader.cpp
 DIST = lab3a-705357270.tar.gz
