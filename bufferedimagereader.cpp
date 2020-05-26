@@ -11,6 +11,13 @@
 
 BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metafile) {}
 
+BufferedImageReader::~BufferedImageReader() 
+{
+  delete[] blockBuffer;
+  delete[] blockGroupBuffer;
+  delete[] groupDescriptorBuffer;
+}
+
 void BufferedImageReader::init()
 {
     this->fs = new std::ifstream(this->meta->filename, std::ios::binary | std::ios::in);
