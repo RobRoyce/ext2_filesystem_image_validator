@@ -96,10 +96,8 @@ class EXT2 {
   // Member Variables
   ImageReader *imReader;
 
-  // unique_ptr<ext2_super_block> superBlock = nullptr;
   unique_ptr<vector<ext2_group_desc>> groupDescTbl;
   unique_ptr<MetaFile> meta = nullptr;
-  // ifstream fs;
 
   // Methods
 
