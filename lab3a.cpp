@@ -10,7 +10,7 @@
 #include "utils.h"
 #include <sys/stat.h>
 
-#define LAB3B_USAGE "Usage: lab3b file system"
+#define LAB3B_USAGE "Usage: lab3b FILE"
 
 
 int debug = 1;
@@ -18,33 +18,34 @@ bool mem_mapped = false;
 
 
 int main(int argc, char **argv) {
-  // -------------------------------------------------- Arg Parse Errors
   if (argc != 2) {
-    std::cout << "lab3a: please specify a file system image." << std::endl;
     std::cout << LAB3B_USAGE << std::endl;
+    std::cout << "lab3a: please specify a file system image." << std::endl;
     exit(1); // TODO proper exit code
   }
 
-  EXT2 *ext2;
 
   // -------------------------------------------------- Check/Read FS
+  std::unique_ptr<EXT2> ext2 = nullptr;
+
   try {
-    ext2 = new EXT2(argv[1]);
-  } catch (...) {
-    std::cout << "lab3a: please specify a file system image." << std::endl;
-    std::cout << LAB3B_USAGE << std::endl;
+    ext2 = std::make_unique<EXT2>(argv[1]);
+  } catch (runtime_error &e) {
+    cout << LAB3B_USAGE << endl;
+    cout << "lab3a: Exception Occurred -- " << e.what() << endl;
     exit(1); // TODO proper exit code
   }
 
-  // -------------------------------------------------- Read/Parse FS
-  ext2->readSuperBlock();
-  ext2->parseSuperBlock();
 
-  if(debug)
-    ext2->printSuperBlock();
 
   // -------------------------------------------------- Generate Reports
+  ext2->printSuperBlock();
+  ext2->printGroupSummary();
+  ext2->printFreeBlockEntries();
+  ext2->printFreeInodeEntries();
+  ext2->printInodeSummary();
+  ext2->printDirectoryEntries();
+  ext2->printIndirectBlockRefs();
 
-  delete ext2;
   return 0;
 }
