@@ -26,6 +26,9 @@ void BufferedImageReader::init()
 
     this->blockBuffer = new char[meta->blockSize];
     this->blockGroupBuffer = new char[meta->blockGroupSize];
+
+    this->multiBlockBufferCount = 8; // Give the multi-block buffer an arbitrary starting count.
+    this->multiBlockBuffer = new char[multiBlockBufferCount * meta->blockSize];
 }
 
 int BufferedImageReader::readSuperBlock() {
@@ -60,6 +63,25 @@ void *BufferedImageReader::getBlock(size_t blockIdx)
   fs->read(this->blockBuffer, meta->blockSize);
 
   return this->blockBuffer;
+}
+
+void *BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
+{
+  if (!fs)
+    return nullptr; // TODO Throw exception instead of return nullptr
+
+  // Resize our internal buffer if it is not large enough for the request.
+  if(numBlocks > multiBlockBufferCount)
+  {
+    delete[] multiBlockBuffer;
+    multiBlockBufferCount = numBlocks;
+    multiBlockBuffer = new char[multiBlockBufferCount * meta->blockSize];
+  }
+
+  fs->seekg(blockIdx * meta->blockSize, std::ios::beg);
+  fs->read(this->multiBlockBuffer, numBlocks * meta->blockSize);
+
+  return this->multiBlockBuffer;
 }
 
 void *BufferedImageReader::getBlockGroup(size_t blockGroupIdx)

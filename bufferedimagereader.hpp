@@ -19,9 +19,11 @@ class BufferedImageReader : public ImageReader {
 
   struct ext2_super_block *getSuperBlock();
 
-  virtual void *getBlock(size_t);
+  virtual void *getBlock(size_t blockIdx);
 
-  virtual void *getBlockGroup(size_t);
+  virtual void *getBlocks(size_t blockIdx, size_t numBlocks);
+
+  virtual void *getBlockGroup(size_t blockGroupIdx);
 
   virtual void *getGroupDescriptor();
 
@@ -38,5 +40,10 @@ private:
   char *blockGroupBuffer = nullptr;
 
   char *groupDescriptorBuffer = nullptr;
+
+  char *multiBlockBuffer = nullptr;
+
+  /*The total number of blocks that can fit in the multiBlockBuffer*/
+  size_t multiBlockBufferCount;
 
 };

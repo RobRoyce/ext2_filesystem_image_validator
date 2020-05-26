@@ -21,7 +21,11 @@ class ImageReader {
 
   struct ext2_super_block *getSuperBlock();
 
-  virtual void *getBlock(size_t) = 0;
+  /*Returns a buffer containing the raw data from the specified blockIdx*/
+  virtual void *getBlock(size_t blockIdx) = 0;
+
+  /*Returns a buffer containing the raw data from numBlocks contiguous blocks, starting at blockIdx*/
+  virtual void *getBlocks(size_t blockIdx, size_t numBlocks) = 0;
 
   virtual void *getBlockGroup(size_t) = 0;
 
