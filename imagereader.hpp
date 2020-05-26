@@ -27,10 +27,6 @@ class ImageReader {
 
   virtual void *getGroupDescriptor() = 0;
 
-  size_t getBlockSize();
-
-  size_t getBlockGroupSize();
-
   static const size_t KiB=1024;
 
 protected:
@@ -39,9 +35,6 @@ protected:
   struct ext2_dir_entry *ext2DirEntry;
 
   MetaFile *meta = nullptr;
-
-  size_t blockSize;
-  size_t blockGroupSize;
 
   virtual int readSuperBlock() = 0;
 };
