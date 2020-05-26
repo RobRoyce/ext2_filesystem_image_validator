@@ -20,15 +20,12 @@ BufferedImageReader::~BufferedImageReader()
 
 void BufferedImageReader::init()
 {
-    this->fs = new std::ifstream(this->meta->filename, std::ios::binary | std::ios::in);
+    this->fs = new std::ifstream(meta->filename, std::ios::binary | std::ios::in);
 
     this->readSuperBlock();
 
-    this->blockSize = KiB << this->superBlock.s_log_block_size;
-    this->blockGroupSize = this->blockSize * this->superBlock.s_blocks_per_group;
-
-    this->blockBuffer = new char[this->blockSize];
-    this->blockGroupBuffer = new char[this->blockGroupSize];
+    this->blockBuffer = new char[meta->blockSize];
+    this->blockGroupBuffer = new char[meta->blockGroupSize];
 }
 
 int BufferedImageReader::readSuperBlock() {
@@ -59,8 +56,8 @@ void *BufferedImageReader::getBlock(size_t blockIdx)
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->seekg(blockIdx * this->blockSize, std::ios::beg);
-  fs->read(this->blockBuffer, this->blockSize);
+  fs->seekg(blockIdx * meta->blockSize, std::ios::beg);
+  fs->read(this->blockBuffer, meta->blockSize);
 
   return this->blockBuffer;
 }
@@ -70,8 +67,8 @@ void *BufferedImageReader::getBlockGroup(size_t blockGroupIdx)
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->seekg((blockGroupIdx * this->blockGroupSize) + KiB, std::ios::beg);
-  fs->read(this->blockGroupBuffer, this->blockGroupSize);
+  fs->seekg((blockGroupIdx * meta->blockGroupSize) + KiB, std::ios::beg);
+  fs->read(this->blockGroupBuffer, meta->blockGroupSize);
 
   return this->blockGroupBuffer;
 }
