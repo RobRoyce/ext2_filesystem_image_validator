@@ -5,10 +5,6 @@
 
 EXT2::EXT2(char *filename) {
 
-
-  // printSuperBlock();
-  // blockDump(1);
-
   // -------------------------------------------------- Initial Meta Check
   try {
     meta = std::make_unique<MetaFile>();
@@ -21,18 +17,10 @@ EXT2::EXT2(char *filename) {
   if (stat(meta->filename.c_str(), &meta->stat) != 0)
     throw runtime_error("FileSystemReadError");
 
-  this->imReader = new BufferedImageReader(meta.get());
-  this->imReader->init();
+  // -------------------------------------------------- Init Reader and Super Block
 
-  // -------------------------------------------------- Init Super Block
-  // try {
-  //   superBlock = std::make_unique<ext2_super_block>();
-  // } catch (...) {
-  //   throw runtime_error("SuperBlockAllocationError");
-  // }
-
-  // if (!readSuperBlock())
-  //   throw runtime_error("SuperBlockReadError");
+  imReader = new BufferedImageReader(meta.get());
+  imReader->init(); // Automatically initializes the super block
 
   if (!parseSuperBlock())
     throw runtime_error("SuperBlockParseError");
@@ -49,9 +37,7 @@ EXT2::EXT2(char *filename) {
 }
 
 // --------------------------------------------------Destructor
-EXT2::~EXT2() {
-  //fs.close();
-}
+EXT2::~EXT2() {}
 
 bool EXT2::getGroupDesc() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
@@ -80,7 +66,6 @@ bool EXT2::getGroupDesc() {
     }
   }
 
-
   return true;
 }
 
@@ -88,35 +73,6 @@ bool EXT2::getMetaFileInfo() {
   // TODO implementation
   return true;
 }
-
-
-// bool EXT2::readSuperBlock() {
-//   std::stringstream buffer;
-//   this->fs = std::ifstream(meta->filename, std::ios::binary | std::ios::in);
-//   if (!fs)
-//     return false;
-
-//   const __u32 SBSIZE = sizeof(ext2_super_block);
-//   if(SBSIZE != KiB)
-//     return false;
-
-//   char buf[SBSIZE];
-//   try {
-//     fs.unsetf(std::ios::skipws);
-//     fs.seekg(KiB, std::ios::beg);
-//     fs.read(buf, SBSIZE);
-//     if (!fs)
-//       return false;
-//   } catch (...) {
-//     return false;
-//   }
-
-//   if(memcpy(superBlock.get(), buf, SBSIZE) == nullptr)
-//     return false;
-
-//   return true;
-// }
-
 
 bool EXT2::parseSuperBlock() {
   // Attempt to perform any type of inferential or explicit validation using the

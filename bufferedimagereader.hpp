@@ -33,17 +33,10 @@ private:
   
   std::ifstream *fs;
 
-  char *blockBuffer;
+  char *blockBuffer = nullptr;
 
-  char *blockGroupBuffer;
+  char *blockGroupBuffer = nullptr;
 
-  char *groupDescriptorBuffer;
-
-  const __u32 GDSIZE = sizeof(ext2_group_desc);
-  // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
-  const __u32 DESC_TABLE_BLOCK = (meta->blockSize == KiB) ? 3 : 2;
-  const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
-  const __u32 DESC_TABLE_SZ = DESC_TABLE_LEN * GDSIZE; // each GD is 32 bytes
-  const unsigned GD_BUFLEN = (GDSIZE * DESC_TABLE_LEN) / sizeof(char);
+  char *groupDescriptorBuffer = nullptr;
 
 };
