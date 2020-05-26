@@ -203,13 +203,34 @@ void EXT2::printSuperBlock() {
   // }
 }
 
-
 void EXT2::printGroupSummary() {
-  // int i = 0;
-  for(auto groupDesc : *groupDescTbl) {
-    // printf("GROUP,%d,%d,%d,%d,%d,%d,%d,%d\n");
-    printDescTable(groupDesc);
-    continue; // TODO
+  const __u32 GROUP_COUNT = groupDescTbl->size();
+  __u32 GS2 = 0; // group number
+  __u32 GS3 = 0;
+  __u32 GS4 = meta->inodesPerGroup;
+  __u16 GS5 = 0;
+  __u16 GS6 = 0;
+  __u32 GS7 = 0;
+  __u32 GS8 = 0;
+  __u32 GS9 = 0;
+
+  for (auto groupDesc : *groupDescTbl) {
+    if (GS2 == GROUP_COUNT - 1)
+      // Calculation required, since this might not be a full group
+      // (file.size - bytes from full groups) / blocksize
+      GS3 = (meta->stat.st_size - ((GROUP_COUNT - 1) * meta->blockGroupSize)) /
+            meta->blockSize;
+    else
+      GS3 = meta->blocksPerGroup;
+
+    GS5 = groupDesc.bg_free_blocks_count;
+    GS6 = groupDesc.bg_free_inodes_count;
+    GS7 = groupDesc.bg_block_bitmap;
+    GS8 = groupDesc.bg_inode_bitmap;
+    GS9 = groupDesc.bg_inode_table;
+
+    printf("GROUP,%d,%d,%d,%d,%d,%d,%d,%d\n", GS2++, GS3, GS4, GS5, GS6, GS7,
+           GS8, GS9);
   }
 }
 
