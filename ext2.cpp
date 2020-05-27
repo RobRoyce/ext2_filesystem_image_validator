@@ -268,7 +268,90 @@ void EXT2::printFreeBlockEntries(){
 }
 
 void EXT2::printFreeInodeEntries(){}
-void EXT2::printInodeSummary(){}
+
+void EXT2::printInodeSummary() {
+
+  const unsigned INODE_TABLE_BLOCK_COUNT = (meta->inodesPerGroup / (meta->blockSize / meta->inodeSize));
+
+  ext2_super_block *superBlock = imReader->getSuperBlock();
+
+  for(auto groupDesc : *groupDescTbl) 
+  {
+    void *inodeBuffer = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
+
+    char *inodeBitmap = static_cast<char*>(inodeBuffer); // the inode bitmap is the first block of the buffer
+    ext2_inode *inodeTable = static_cast<ext2_inode*>(inodeBuffer + meta->blockSize); // inode table is 2nd block to end of inodeBuffer
+
+    ext2_inode *currentInode;
+
+    for(size_t i = 0; i < superBlock->s_inodes_count/8; ++i)
+    {
+      size_t inodeOffset = 8*i;
+
+      for(size_t bitIdx = 0; bitIdx < 8; ++bitIdx)
+      {
+        if((inodeBitmap[i] >> bitIdx) & 0x01)
+        {
+          size_t inodeNumber = inodeOffset + bitIdx + 1; // Inode number starts at 1, not 0
+          currentInode = &inodeTable[inodeNumber - 1]; 
+
+          // Skip unallocated inodes
+          if((currentInode->i_mode == 0) || (currentInode->i_links_count == 0))
+            continue;
+
+          char mode;
+
+          // Time format: dd/mm/yy hh:mm:ss\0
+          const size_t TIME_STR_LEN = 18;
+          char cTimeStr[TIME_STR_LEN];
+          char mTimeStr[TIME_STR_LEN];
+          char aTimeStr[TIME_STR_LEN];
+
+          time_t cTime = currentInode->i_ctime;
+          time_t mTime = currentInode->i_mtime;
+          time_t aTime = currentInode->i_atime;
+
+          strftime(cTimeStr, TIME_STR_LEN, "%D %X", gmtime(&cTime));
+          strftime(mTimeStr, TIME_STR_LEN, "%D %X", gmtime(&mTime));
+          strftime(aTimeStr, TIME_STR_LEN, "%D %X", gmtime(&aTime));
+
+          if(S_ISREG(currentInode->i_mode))
+            mode = 'f';
+          else if(S_ISDIR(currentInode->i_mode))
+            mode = 'd';
+          else if(S_ISLNK(currentInode->i_mode))
+            mode = 's';
+          else
+            mode = '?';
+
+          printf("INODE,%lu,%c,%o,%d,%d,%d,%s,%s,%s,%d,%d",
+                inodeNumber,
+                mode,
+                currentInode->i_mode & 0x0FFF,
+                currentInode->i_uid,
+                currentInode->i_gid,
+                currentInode->i_links_count,
+                cTimeStr,
+                mTimeStr,
+                aTimeStr,
+                currentInode->i_size,
+                currentInode->i_blocks
+                );
+
+          if(((mode == 'f') || (mode == 'd')) || ((mode == 's' && currentInode->i_size > 60)))
+          {
+            for(size_t i = 0; i < 15; ++i)
+            {
+              printf(",%d", currentInode->i_block[i]);
+            }
+          }
+
+          printf("\n");
+        }
+      }
+    }
+  }
+}
 void EXT2::printDirectoryEntries(){}
 void EXT2::printIndirectBlockRefs(){}
 
