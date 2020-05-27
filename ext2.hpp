@@ -16,7 +16,8 @@
 #define SUPERBLOCK_SIZE sizeof(ext2_super_block)
 #define EXT2_OLD_REV 0
 #define EXT2_DYNAMIC_REV 1
-
+const __u8 MASK = 0xFF;
+const __u32 MASK_SIZE = sizeof(__u8) * 8;
 
 extern int debug;
 

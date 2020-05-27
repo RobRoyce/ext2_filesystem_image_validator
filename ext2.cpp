@@ -231,12 +231,13 @@ void EXT2::printGroupSummary() {
 
 void EXT2::printFreeBlockEntries(){
   // Block 1 corresponds to bit 0 of byte 0
-  const __u32 MASK_SIZE = sizeof(__u8) * 8;
   const __u32 GROUP_COUNT = groupDescTbl->size();
-  const __u8 MASK = 0xFF;
   __u32 bitmapSize = meta->blocksPerGroup;
+  __u32 iters = bitmapSize / MASK_SIZE;
   __u32 bitmapAddr = 0;
   __u32 index = 0;
+  const __u8 residuals = bitmapSize % MASK_SIZE;
+  iters = residuals ? iters + 1 : iters;
 
 
   for(auto groupDesc : *groupDescTbl) {
@@ -247,27 +248,72 @@ void EXT2::printFreeBlockEntries(){
       bitmapSize = blocksInLastGroup();
 
     if (debug) {
+      printf("-------------------------------------------------- printFreeBlockEntries()\n");
       printf("Group Count: %d...\n", GROUP_COUNT);
       printf("Bitmap Size: %d...\n", bitmapSize);
       printf("Bitmap Block Address: %d...\n", bitmapAddr);
       printf("Number of Iterations (8bpi): %d...\n", bitmapSize/MASK_SIZE);
+      printf("-------------------------------------------------- /printFreeBlockEntries()\n");
     }
 
-    const __u32 N_ITERS = bitmapSize / MASK_SIZE;
-    __u8 bitMask = 0x00;
 
-    for (__u32 maskIt = 0x00000000; maskIt < N_ITERS; maskIt += 0x00000001) {
+    __u8 bitMask = 0x00;
+    for (__u32 maskIt = 0x00000000; maskIt < iters; maskIt += 0x00000001) {
       __u8 bit = 1;
       bitMask = buf[maskIt] & MASK;
 
-      for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
-        if(!(bitMask & bit))
-          printf("BFREE,%d\n", (maskIt * 8) + k + 1);
+
+      if(maskIt == iters - 1 && residuals) {
+        // if the last byte contains padding
+        for (__u32 k = 0; k < residuals; k++, bit <<= 1)
+          if (!(bitMask & bit))
+            printf("BFREE,%d\n", (maskIt * 8) + k + 1);
+      } else {
+        for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
+          if (!(bitMask & bit))
+            printf("BFREE,%d\n", (maskIt * 8) + k + 1);
+      }
     }
   }
 }
 
-void EXT2::printFreeInodeEntries(){}
+void EXT2::printFreeInodeEntries(){
+  __u32 bitmapSize = meta->inodesPerGroup;
+  __u32 iters = bitmapSize / MASK_SIZE;
+  __u32 bitmapAddr = 0;
+  const __u8 residuals = bitmapSize % MASK_SIZE;
+  iters = residuals ? iters + 1 : iters;
+
+  for (auto groupDesc : *groupDescTbl) {
+    bitmapAddr = groupDesc.bg_inode_bitmap;
+    char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
+
+    if (debug) {
+      printf("--------------------------------------------------printFreeInodeEntries()\n");
+      printf("Bitmap Size: %d...\n", bitmapSize);
+      printf("Bitmap Block Address: %d...\n", bitmapAddr);
+      printf("Number of Iterations (8bpi): %d...\n", bitmapSize / MASK_SIZE);
+      printf("--------------------------------------------------/printFreeInodekEntries()\n");
+    }
+
+    __u8 bitMask = 0x00;
+    for(__u32 maskIt = 0x00000000; maskIt < iters; maskIt += 0x00000001) {
+      __u8 bit = 1;
+      bitMask = buf[maskIt] & MASK;
+
+      if(maskIt == iters - 1 && residuals) {
+        // if the last byte contains padding
+        for(__u32 k = 0; k < residuals; k++, bit <<=1)
+          if(!(bitMask & bit))
+            printf("IFREE,%d\n", (maskIt * 8) + k + 1);
+      } else {
+        for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
+          if (!(bitMask & bit))
+            printf("IFREE,%d\n", (maskIt * 8) + k + 1);
+      }
+    }
+  }
+}
 void EXT2::printInodeSummary(){}
 void EXT2::printDirectoryEntries(){}
 void EXT2::printIndirectBlockRefs(){}
