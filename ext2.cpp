@@ -141,11 +141,11 @@ bool EXT2::parseSuperBlock() {
 
       break;
     default:
-    break;
+      break;
   }
 
   return true;
-  }
+}
 
 void EXT2::printSuperBlock() {
 
@@ -228,9 +228,41 @@ void EXT2::printGroupSummary() {
 }
 
 void EXT2::printFreeBlockEntries(){
-  __u32 FB2 = 0;
+  const __u32 GROUP_COUNT = groupDescTbl->size();
+  __u32 bitmapSize = meta->blocksPerGroup;
+  __u32 bitmapAddr = 0;
+  __u32 index = 0;
 
-  printf("BFREE,%d\n", FB2);
+  for(auto groupDesc : *groupDescTbl) {
+    bitmapAddr = groupDesc.bg_block_bitmap;
+    char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
+
+    if(index++ == GROUP_COUNT - 1)
+      bitmapSize = blocksInLastGroup();
+
+    if (debug) {
+      printf("Group Count: %d...\n", GROUP_COUNT);
+      printf("Bitmap Size: %d...\n", bitmapSize);
+      printf("Bitmap Block Address: %d...\n", bitmapAddr);
+    }
+
+    const __u32 MASK_SIZE = sizeof(__u8);
+    const __u32 N_ITERS = bitmapSize / MASK_SIZE;
+    const __u8 MASK = 0xFF;
+    __u8 bitMask = 0x00;
+
+    for (__u32 maskIt = 0x00000000; maskIt < N_ITERS; maskIt += 0x00000001) {
+      bitMask = buf[maskIt] & MASK;
+
+      for (__u8 bit = 1; bit < MASK_SIZE; bit *= 2) {
+        if(bitMask & bit) {
+          int index = 0;
+          printf("BFREE,%d\n", index);
+        }
+
+      }
+    }
+  }
 }
 
 void EXT2::printFreeInodeEntries(){}
@@ -284,10 +316,22 @@ void EXT2::printDescTable(struct ext2_group_desc gd) {
   printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
 }
 
-__u32 EXT2::blocksInLastGroup() {
+int EXT2::blocksInLastGroup() {
   __u32 size = meta->stat.st_size;
   __u32 fullGroupsCount = groupDescTbl->size() - 1;
   __u32 groupSize = meta->blockGroupSize;
   __u32 blockSize = meta->blockSize;
-  return (size - (fullGroupsCount * groupSize)) / blockSize;
+  int res = (size - (fullGroupsCount * groupSize)) / blockSize;
+
+  if(debug) {
+    printf("-------------------------------------------------- blocksInLastGroup()\n");
+    printf("File Size: %d...\n", size);
+    printf("Number of Full Groups: %d...\n", fullGroupsCount);
+    printf("Group Size: %d...\n", groupSize);
+    printf("Block Size: %d...\n", blockSize);
+    printf("Blocks in Last Group: %d...\n", res);
+    printf("-------------------------------------------------- /blocksInLastGroup()\n");
+  }
+
+  return res;
 }

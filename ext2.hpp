@@ -30,6 +30,7 @@ using std::runtime_error;
 using std::unique_ptr;
 using std::vector;
 
+
 // -------------------------------------------------- Prototypical Block
 class MemoryBlock {
  public:
@@ -93,5 +94,5 @@ class EXT2 {
   bool getGroupDescTbl();
   bool validateSuperBlock();
   void printDescTable(struct ext2_group_desc);
-  __u32 blocksInLastGroup();
+  int blocksInLastGroup();
 };
