@@ -9,7 +9,12 @@
 #include <sstream>
 #include <sys/stat.h>
 
-BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metafile) {}
+BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metafile)
+{
+    this->fs = new std::ifstream(meta->filename, std::ios::binary | std::ios::in);
+
+    this->readSuperBlock();
+}
 
 BufferedImageReader::~BufferedImageReader() 
 {
@@ -20,10 +25,6 @@ BufferedImageReader::~BufferedImageReader()
 
 void BufferedImageReader::init()
 {
-    this->fs = new std::ifstream(meta->filename, std::ios::binary | std::ios::in);
-
-    this->readSuperBlock();
-
     this->blockBuffer = new char[meta->blockSize];
     this->blockGroupBuffer = new char[meta->blockGroupSize];
 

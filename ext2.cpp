@@ -20,10 +20,11 @@ EXT2::EXT2(char *filename) {
   // slightly hacky way to use smart pointers with polymorphism (improvements welcomed)
   unique_ptr<ImageReader> base(new BufferedImageReader(meta.get()));
   imReader = std::move(base);
-  imReader->init(); // Automatically initializes the super block
 
   if (!parseSuperBlock())
     throw runtime_error("SuperBlockParseError");
+
+  imReader->init();
 
   // -------------------------------------------------- Integrity Check Meta
   if(!getMetaFileInfo())
