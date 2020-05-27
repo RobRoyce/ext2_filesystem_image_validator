@@ -277,7 +277,6 @@ void EXT2::printFreeBlockEntries(){
   }
 }
 
-<<<<<<< HEAD
 void EXT2::printFreeInodeEntries(){
   __u32 bitmapSize = meta->inodesPerGroup;
   __u32 iters = bitmapSize / MASK_SIZE;
@@ -311,8 +310,10 @@ void EXT2::printFreeInodeEntries(){
         for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
           if (!(bitMask & bit))
             printf("IFREE,%d\n", (maskIt * 8) + k + 1);
-=======
-void EXT2::printFreeInodeEntries(){}
+      }
+    }
+  }
+}
 
 void EXT2::printInodeSummary() {
 
@@ -393,15 +394,12 @@ void EXT2::printInodeSummary() {
 
           printf("\n");
         }
->>>>>>> 0d3ac503e59104d64cdb53ec65a80e1a4b91f87d
       }
     }
   }
 }
-<<<<<<< HEAD
-void EXT2::printInodeSummary(){}
-=======
->>>>>>> 0d3ac503e59104d64cdb53ec65a80e1a4b91f87d
+
+
 void EXT2::printDirectoryEntries(){}
 void EXT2::printIndirectBlockRefs(){}
 
