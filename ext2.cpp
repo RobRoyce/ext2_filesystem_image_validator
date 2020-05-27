@@ -24,6 +24,7 @@ EXT2::EXT2(char *filename) {
   if (!parseSuperBlock())
     throw runtime_error("SuperBlockParseError");
 
+
   imReader->init();
 
   // -------------------------------------------------- Integrity Check Meta
@@ -229,10 +230,14 @@ void EXT2::printGroupSummary() {
 }
 
 void EXT2::printFreeBlockEntries(){
+  // Block 1 corresponds to bit 0 of byte 0
+  const __u32 MASK_SIZE = sizeof(__u8) * 8;
   const __u32 GROUP_COUNT = groupDescTbl->size();
+  const __u8 MASK = 0xFF;
   __u32 bitmapSize = meta->blocksPerGroup;
   __u32 bitmapAddr = 0;
   __u32 index = 0;
+
 
   for(auto groupDesc : *groupDescTbl) {
     bitmapAddr = groupDesc.bg_block_bitmap;
@@ -245,23 +250,19 @@ void EXT2::printFreeBlockEntries(){
       printf("Group Count: %d...\n", GROUP_COUNT);
       printf("Bitmap Size: %d...\n", bitmapSize);
       printf("Bitmap Block Address: %d...\n", bitmapAddr);
+      printf("Number of Iterations (8bpi): %d...\n", bitmapSize/MASK_SIZE);
     }
 
-    const __u32 MASK_SIZE = sizeof(__u8);
     const __u32 N_ITERS = bitmapSize / MASK_SIZE;
-    const __u8 MASK = 0xFF;
     __u8 bitMask = 0x00;
 
     for (__u32 maskIt = 0x00000000; maskIt < N_ITERS; maskIt += 0x00000001) {
+      __u8 bit = 1;
       bitMask = buf[maskIt] & MASK;
 
-      for (__u8 bit = 1; bit < MASK_SIZE; bit *= 2) {
-        if(bitMask & bit) {
-          int index = 0;
-          printf("BFREE,%d\n", index);
-        }
-
-      }
+      for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
+        if(!(bitMask & bit))
+          printf("BFREE,%d\n", (maskIt * 8) + k + 1);
     }
   }
 }
