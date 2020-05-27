@@ -23,8 +23,6 @@ class BufferedImageReader : public ImageReader {
 
   virtual void *getBlocks(size_t blockIdx, size_t numBlocks);
 
-  virtual void *getBlockGroup(size_t blockGroupIdx);
-
   virtual void *getGroupDescriptor();
 
 protected:
@@ -36,8 +34,6 @@ private:
   std::ifstream *fs;
 
   char *blockBuffer = nullptr;
-
-  char *blockGroupBuffer = nullptr;
 
   char *groupDescriptorBuffer = nullptr;
 

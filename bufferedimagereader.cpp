@@ -18,15 +18,13 @@ BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metaf
 
 BufferedImageReader::~BufferedImageReader() 
 {
-  delete[] blockBuffer;
-  delete[] blockGroupBuffer;
-  delete[] groupDescriptorBuffer;
+  //delete[] blockBuffer;
+  //delete[] groupDescriptorBuffer;
 }
 
 void BufferedImageReader::init()
 {
     this->blockBuffer = new char[meta->blockSize];
-    this->blockGroupBuffer = new char[meta->blockGroupSize];
 
     this->multiBlockBufferCount = 8; // Give the multi-block buffer an arbitrary starting count.
     this->multiBlockBuffer = new char[multiBlockBufferCount * meta->blockSize];
@@ -83,17 +81,6 @@ void *BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
   fs->read(this->multiBlockBuffer, numBlocks * meta->blockSize);
 
   return this->multiBlockBuffer;
-}
-
-void *BufferedImageReader::getBlockGroup(size_t blockGroupIdx)
-{
-  if (!fs)
-    return nullptr; // TODO Throw exception instead of return nullptr
-
-  fs->seekg((blockGroupIdx * meta->blockGroupSize) + KiB, std::ios::beg);
-  fs->read(this->blockGroupBuffer, meta->blockGroupSize);
-
-  return this->blockGroupBuffer;
 }
 
 void *BufferedImageReader::getGroupDescriptor()

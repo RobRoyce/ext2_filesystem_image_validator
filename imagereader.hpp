@@ -27,8 +27,6 @@ class ImageReader {
   /*Returns a buffer containing the raw data from numBlocks contiguous blocks, starting at blockIdx*/
   virtual void *getBlocks(size_t blockIdx, size_t numBlocks) = 0;
 
-  virtual void *getBlockGroup(size_t) = 0;
-
   virtual void *getGroupDescriptor() = 0;
 
   static const size_t KiB=1024;
