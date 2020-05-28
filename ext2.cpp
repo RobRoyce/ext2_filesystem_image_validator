@@ -376,7 +376,7 @@ void EXT2::printInodeSummary() {
   {
     void *inodeBuffer = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
     char *inodeBitmap = static_cast<char*>(inodeBuffer); // the inode bitmap is the first block of the buffer
-    ext2_inode *inodeTable = static_cast<ext2_inode *>(inodeBuffer + meta->blockSize); // inode table is 2nd block to end of inodeBuffer
+    ext2_inode *inodeTable = static_cast<ext2_inode *>(inodeBuffer) + meta->blockSize/meta->inodeSize; // inode table is 2nd block to end of inodeBuffer
     ext2_inode *currentInode;
 
     for(size_t i = 0; i < superBlock->s_inodes_count/8; ++i)
