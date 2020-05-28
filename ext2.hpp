@@ -17,6 +17,7 @@
 #define SUPERBLOCK_SIZE sizeof(ext2_super_block)
 #define EXT2_OLD_REV 0
 #define EXT2_DYNAMIC_REV 1
+
 const __u8 MASK = 0xFF;
 const __u32 MASK_SIZE = sizeof(__u8) * 8;
 
@@ -32,44 +33,9 @@ using std::runtime_error;
 using std::unique_ptr;
 using std::vector;
 
-
-// -------------------------------------------------- Prototypical Block
-class MemoryBlock {
- public:
-   MemoryBlock() {}
-   MemoryBlock(std::vector<char> data) : data(data), size(data.size()) {}
-
- private:
-  std::vector<char> data;
-  __u32 size;
-};
-
-
-class MemoryBlockCache {
- public:
-   MemoryBlockCache() {}
-   MemoryBlockCache(size_t nblocks) {
-     blocks.reserve(nblocks);
-   }
-   ~MemoryBlockCache() {}
-
- private:
-  vector<MemoryBlock> blocks;
-
-};
-
-enum MemoryManagement {
-  DMA, MMIO, HYBRID
-};
-
-
 // -------------------------------------------------- EXT2
 class EXT2 {
  public:
-  // Member Variables
-
-
-  // Methods
   EXT2(char *);
   ~EXT2();
   bool readSuperBlock(); // validate and populate superBlock
@@ -85,12 +51,10 @@ class EXT2 {
   void printIndirectBlockRefs();
 
  private:
-  // Member Variables
   unique_ptr<ImageReader> imReader = nullptr;
   unique_ptr<MetaFile> meta = nullptr;
   unique_ptr<vector<ext2_group_desc>> groupDescTbl;
 
-  // Methods
   void blockDump(size_t);
   bool getMetaFileInfo();
   bool getGroupDescTbl();

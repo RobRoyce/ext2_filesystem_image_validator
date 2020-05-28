@@ -42,6 +42,7 @@ EXT2::EXT2(char *filename) {
 // --------------------------------------------------Destructor
 EXT2::~EXT2() {}
 
+
 bool EXT2::getGroupDescTbl() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
   const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
@@ -86,7 +87,7 @@ bool EXT2::parseSuperBlock() {
   // Block size can be calculated in two ways. First, it should be the total
   // file size divided by the number of blocks (file.size /
   // superBlock.blockCount) Second, it can be found explicitly using
-  // (blockSize = 1024 << log_block_size) We can use this for validatiion
+  // (blockSize = 1024 << s_log_block_size) We can use this for validatiion
   // purposes.
   __u32 blockSize1 = meta->stat.st_size / superBlock->s_blocks_count;
   __u32 blockSize2 = KiB << superBlock->s_log_block_size;
@@ -103,6 +104,8 @@ bool EXT2::parseSuperBlock() {
   meta->blocksPerGroup = superBlock->s_blocks_per_group; // how many blocks per group?
   meta->blockGroupSize = meta->blockSize * meta->blocksPerGroup; // what size is each block group?
 
+  // -- Note: the spec for project3a explicitly states that there will only be a single
+  // -- block group, so we can make some assumptions about valid input
   if (debug) {
     printf("Block Count: %d...\n", meta->blockCount);
     printf("Block Size: %d...\n", meta->blockSize);
@@ -111,8 +114,6 @@ bool EXT2::parseSuperBlock() {
     printf("Block Group Size: %lld...\n", meta->blockGroupSize);
   }
 
-  // -- Note: the spec for project3a explicitly states that there will only be a single
-  // -- block group, so we can make some assumptions about valid input
   // how many block groups are there?
   meta->blockGroupsCount = (meta->blockCount < meta->blocksPerGroup) ? 1 : meta->blockCount / meta->blocksPerGroup;
 
@@ -121,9 +122,7 @@ bool EXT2::parseSuperBlock() {
   if (meta->blockGroupsCount != 1)
     return false;
 
-
-  // -- There are various things we need to do based on contents of the Super
-  // Block
+  // -- There are various things we need to do based on contents of the Super Block
   // -- Revision determines algorithm for lookup (hash map vs linked list)
   // -- Revision 1:
   // --- variable inode sizes
@@ -208,13 +207,13 @@ void EXT2::printSuperBlock() {
 void EXT2::printGroupSummary() {
   const __u32 GROUP_COUNT = groupDescTbl->size();
   __u32 GS2 = 0; // group number
-  __u32 GS3 = 0;
-  __u32 GS4 = meta->inodesPerGroup;
-  __u16 GS5 = 0;
-  __u16 GS6 = 0;
-  __u32 GS7 = 0;
-  __u32 GS8 = 0;
-  __u32 GS9 = 0;
+  __u32 GS3 = 0; // blocks in group
+  __u32 GS4 = meta->inodesPerGroup; // inodes per group
+  __u16 GS5 = 0; // free blocks count
+  __u16 GS6 = 0; // free inodes count
+  __u32 GS7 = 0; // block bitmap
+  __u32 GS8 = 0; // inode bitmap
+  __u32 GS9 = 0; // inode table
 
   for (auto groupDesc : *groupDescTbl) {
     GS3 = (GS2 == GROUP_COUNT-1) ? blocksInLastGroup() : meta->blocksPerGroup;
@@ -230,16 +229,22 @@ void EXT2::printGroupSummary() {
 }
 
 void EXT2::printFreeBlockEntries(){
-  // Block 1 corresponds to bit 0 of byte 0
   const __u32 GROUP_COUNT = groupDescTbl->size();
   __u32 bitmapSize = meta->blocksPerGroup;
   __u32 iters = bitmapSize / MASK_SIZE;
   __u32 bitmapAddr = 0;
   __u32 index = 0;
   const __u8 residuals = bitmapSize % MASK_SIZE;
+
+  // if (for some reason) the bitmap size is not a multiple of 8, then the final
+  // byte will contain at least one bit which does not correspond to an actual
+  // block entry. In this case, the value stored in 'iters' will have been
+  // truncated. To compensate for this, we check for residuals (anything left
+  // after the calculation of 'iters'). If so, that means we will need an
+  // additional iteration to deal with those extra bits.
   iters = residuals ? iters + 1 : iters;
 
-
+  // Block 1 corresponds to bit 0 of byte 0
   for(auto groupDesc : *groupDescTbl) {
     bitmapAddr = groupDesc.bg_block_bitmap;
     char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
@@ -250,38 +255,49 @@ void EXT2::printFreeBlockEntries(){
     if (debug) {
       printf("-------------------------------------------------- printFreeBlockEntries()\n");
       printf("Group Count: %d...\n", GROUP_COUNT);
-      printf("Bitmap Size: %d...\n", bitmapSize);
+      printf("Bitmap Size: %d bits...\n", bitmapSize);
       printf("Bitmap Block Address: %d...\n", bitmapAddr);
-      printf("Number of Iterations (8bpi): %d...\n", bitmapSize/MASK_SIZE);
+      printf("Number of Iterations (8 bits per): %d...\n", bitmapSize/MASK_SIZE);
       printf("-------------------------------------------------- /printFreeBlockEntries()\n");
     }
 
-
+    // perform bitmask then switch on the results (to print or not to print BFREE)
     __u8 bitMask = 0x00;
     for (__u32 maskIt = 0x00000000; maskIt < iters; maskIt += 0x00000001) {
-      __u8 bit = 1;
       bitMask = buf[maskIt] & MASK;
-
+      __u8 bit = 1;
 
       if(maskIt == iters - 1 && residuals) {
-        // if the last byte contains padding
+        // if the most significant byte contains padding
         for (__u32 k = 0; k < residuals; k++, bit <<= 1)
           if (!(bitMask & bit))
             printf("BFREE,%d\n", (maskIt * 8) + k + 1);
+
       } else {
         for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
           if (!(bitMask & bit))
             printf("BFREE,%d\n", (maskIt * 8) + k + 1);
-      }
-    }
-  }
+      } // END if(maskIt == iters...) else...
+
+    } // END for(__u32 maskIt = 0x....)
+  } // END for(auto groupDesc...)
 }
+
 
 void EXT2::printFreeInodeEntries(){
   __u32 bitmapSize = meta->inodesPerGroup;
+  // TODO: will the bitmap size ALWAYS equal the number of inodes per group?
+
   __u32 iters = bitmapSize / MASK_SIZE;
   __u32 bitmapAddr = 0;
   const __u8 residuals = bitmapSize % MASK_SIZE;
+
+  // if (for some reason) the bitmap size is not a multiple of 8, then the final
+  // byte will contain at least one bit which does not correspond to an actual
+  // inode entry. In this case, the value stored in 'iters' will have been
+  // truncated. To compensate for this, we check for residuals (anything left
+  // after the calculation of 'iters'). If so, that means we will need an
+  // additional iteration to deal with those extra bits.
   iters = residuals ? iters + 1 : iters;
 
   for (auto groupDesc : *groupDescTbl) {
@@ -290,7 +306,7 @@ void EXT2::printFreeInodeEntries(){
 
     if (debug) {
       printf("--------------------------------------------------printFreeInodeEntries()\n");
-      printf("Bitmap Size: %d...\n", bitmapSize);
+      printf("Bitmap Size: %d bits...\n", bitmapSize);
       printf("Bitmap Block Address: %d...\n", bitmapAddr);
       printf("Number of Iterations (8bpi): %d...\n", bitmapSize / MASK_SIZE);
       printf("--------------------------------------------------/printFreeInodekEntries()\n");
@@ -298,21 +314,23 @@ void EXT2::printFreeInodeEntries(){
 
     __u8 bitMask = 0x00;
     for(__u32 maskIt = 0x00000000; maskIt < iters; maskIt += 0x00000001) {
-      __u8 bit = 1;
       bitMask = buf[maskIt] & MASK;
+      __u8 bit = 1;
 
       if(maskIt == iters - 1 && residuals) {
         // if the last byte contains padding
         for(__u32 k = 0; k < residuals; k++, bit <<=1)
           if(!(bitMask & bit))
             printf("IFREE,%d\n", (maskIt * 8) + k + 1);
+
       } else {
         for (__u32 k = 0; k < MASK_SIZE; k++, bit <<= 1)
           if (!(bitMask & bit))
             printf("IFREE,%d\n", (maskIt * 8) + k + 1);
-      }
-    }
-  }
+      } // END if(maskIt == iters...) else...
+
+    }// END for(__u32 maskIt...)
+  } // END for(auto groupDesc...)
 }
 
 void EXT2::printInodeSummary() {
@@ -439,13 +457,13 @@ bool EXT2::validateSuperBlock() {
 
 /*PRIVATE*/
 void EXT2::printDescTable(struct ext2_group_desc gd) {
-  printf("Block Bitmap: %x...\n", gd.bg_block_bitmap);
-  printf("Inode Bitmap: %x...\n", gd.bg_inode_bitmap);
-  printf("Inode Table: %x...\n", gd.bg_inode_table);
-  printf("Free Block Count: %x...\n", gd.bg_free_blocks_count);
-  printf("Free Inodes Count: %x...\n", gd.bg_free_inodes_count);
-  printf("Used Dirs Count: %x...\n", gd.bg_used_dirs_count);
-  printf("Padding: %x...\n", gd.bg_pad);
+  printf("Block Bitmap: %d...\n", gd.bg_block_bitmap);
+  printf("Inode Bitmap: %d...\n", gd.bg_inode_bitmap);
+  printf("Inode Table: %d...\n", gd.bg_inode_table);
+  printf("Free Block Count: %d...\n", gd.bg_free_blocks_count);
+  printf("Free Inodes Count: %d...\n", gd.bg_free_inodes_count);
+  printf("Used Dirs Count: %d...\n", gd.bg_used_dirs_count);
+  printf("Padding: %d...\n", gd.bg_pad);
   printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
 }
 
