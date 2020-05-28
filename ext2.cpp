@@ -3,18 +3,14 @@
 #include <iomanip>
 
 EXT2::EXT2(char *filename) {
-
   // -------------------------------------------------- Initial Meta Check
-  try {
-    meta = std::make_unique<MetaFile>();
-  } catch (...) {
-    throw runtime_error("FileSystemAllocationError");
-  }
+  try { meta = std::make_unique<MetaFile>(); }
+  catch (...) { throw runtime_error("FileSystemAllocationError"); }
 
-  meta->filename = std::string(filename);
+  meta->filename = string(filename);
 
   if (stat(meta->filename.c_str(), &meta->stat) != 0)
-    throw runtime_error("FileSystemReadError");
+    throw runtime_error("FileSystemStatError");
 
   // -------------------------------------------------- Init Reader and Super Block
   // slightly hacky way to use smart pointers with polymorphism (improvements welcomed)
@@ -24,35 +20,36 @@ EXT2::EXT2(char *filename) {
   if (!parseSuperBlock())
     throw runtime_error("SuperBlockParseError");
 
-
   imReader->init();
 
-  // -------------------------------------------------- Integrity Check Meta
-  if(!getMetaFileInfo())
-    throw runtime_error("FileSystemInvalidError");
-
-  if(!validateSuperBlock())
-    throw runtime_error("SuperBlockInvalidError");
+  // -------------------------------------------------- Super Block Validation
+  try { validateSuperBlock(); }
+  catch (runtime_error &e) { throw e; }
+  catch (...) { throw runtime_error("SuperBlockValiationError"); }
 
   // -------------------------------------------------- Populate Group Descriptor Table
-  if(!getGroupDescTbl())
-    throw runtime_error("GroupDescriptionReadError");
+  try { getGroupDescTbl(); }
+  catch (EXT2_error &e) { throw e; }
+  catch (...) { throw EXT2_error("GroupDescriptorReadError"); }
 }
 
-// --------------------------------------------------Destructor
+
 EXT2::~EXT2() {}
 
 
 bool EXT2::getGroupDescTbl() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
   const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
-
   char *buf = static_cast<char*>(this->imReader->getGroupDescriptor());
 
   // buf now contains the entire block group descriptor table
   // create group descriptor entires and append to the vector groupDescTbl
-  groupDescTbl = make_unique<vector<ext2_group_desc>>();
-  groupDescTbl->reserve(DESC_TABLE_LEN);
+  try {
+    groupDescTbl = make_unique<vector<ext2_group_desc>>();
+    groupDescTbl->reserve(DESC_TABLE_LEN);
+  }
+  catch (...) { throw EXT2_error("MemoryAllocationImpossible"); }
+
 
   for (__u32 i = 0; i < DESC_TABLE_LEN; i++) {
     unique_ptr<ext2_group_desc> tmp = make_unique<ext2_group_desc>();
@@ -70,42 +67,63 @@ bool EXT2::getGroupDescTbl() {
     }
   }
 
+  // These can ONLY be done once the vector is initialized
+  setBlocksInLastGroup();
+  setInodesInLastGroup();
+
   return true;
 }
 
-bool EXT2::getMetaFileInfo() {
-  // TODO implementation
-  return true;
-}
-
-bool EXT2::parseSuperBlock() {
-  // Attempt to perform any type of inferential or explicit validation using the
-  // specifications given for EXT2. We're mostly looking for inconsistencies here.
-
-  ext2_super_block *superBlock = this->imReader->getSuperBlock();
+void EXT2::getMetaFileInfo(ext2_super_block *sb) {
+  // There are various things we need to do based on contents of the SuperBlock
+  // Revision determines algorithm for lookup (hash map vs linked list)
+  // - Revision 0:
+  // - - 
+  // - Revision 1:
+  // - - variable inode sizes
+  // - - extended attributesa
+  // - - Sparse SuperBlocks
+  meta->rev = sb->s_rev_level;
+  meta->revMinor = sb->s_minor_rev_level;
 
   // Block size can be calculated in two ways. First, it should be the total
-  // file size divided by the number of blocks (file.size /
-  // superBlock.blockCount) Second, it can be found explicitly using
-  // (blockSize = 1024 << s_log_block_size) We can use this for validatiion
-  // purposes.
-  __u32 blockSize1 = meta->stat.st_size / superBlock->s_blocks_count;
-  __u32 blockSize2 = KiB << superBlock->s_log_block_size;
-
-  if(debug)
+  // file size divided by the number of blocks
+  // - - (file.size / superBlock.blockCount)
+  //
+  // Second, it can be found explicitly using
+  // - - (blockSize = 1024 << s_log_block_size)
+  //
+  // We can use this for validation purposes.
+  __u32 blockSize1 = meta->stat.st_size / sb->s_blocks_count;
+  __u32 blockSize2 = KiB << sb->s_log_block_size;
+  if (debug)
     printf("Blocksize Calculations: [1:%d] [2:%d]...\n", blockSize1, blockSize2);
   if (blockSize1 != blockSize2)
-    return false;
+    throw EXT2_error("FileSystemMalformedBlockSizeError");
 
-
-  meta->blockCount = superBlock->s_blocks_count; // how many blocks in the file system?
-  meta->blockSize = blockSize2; // what size is each block?
-  meta->inodesPerGroup = superBlock->s_inodes_per_group; // How many inodes per group?
-  meta->blocksPerGroup = superBlock->s_blocks_per_group; // how many blocks per group?
+  // Set meta fields based on superBlock
+  meta->blockCount = sb->s_blocks_count; // how many blocks in the file system?
+  meta->blockSize = blockSize2;   // what size is each block?
+  meta->inodesPerGroup = sb->s_inodes_per_group; // How many inodes per group?
+  meta->blocksPerGroup = sb->s_blocks_per_group; // how many blocks per group?
   meta->blockGroupSize = meta->blockSize * meta->blocksPerGroup; // what size is each block group?
 
-  // -- Note: the spec for project3a explicitly states that there will only be a single
-  // -- block group, so we can make some assumptions about valid input
+  // how many block groups are there? Note: the spec for project3a explicitly
+  // states that there will only be a single block group, so we can make some
+  // assumptions about valid input
+  const __u32 bgc = meta->blockCount / meta->blocksPerGroup;
+  meta->blockGroupsCount = (meta->blockCount < meta->blocksPerGroup) ? 1 : bgc;
+  if (debug)
+    printf("Number of Block Groups: %d...\n", meta->blockGroupsCount);
+  if (meta->blockGroupsCount != 1)
+    throw EXT2_error(
+        "CS111ProjectSpecificationError -- Hi, TA... you promised there would "
+        "only be one group max! Why have you done this to us? Surely you will "
+        "not mark us down for this... considering it was in the specification :)");
+
+
+  // --------------------------------------------------
+  // Show me the money baby
   if (debug) {
     printf("Block Count: %d...\n", meta->blockCount);
     printf("Block Size: %d...\n", meta->blockSize);
@@ -114,13 +132,25 @@ bool EXT2::parseSuperBlock() {
     printf("Block Group Size: %lld...\n", meta->blockGroupSize);
   }
 
-  // how many block groups are there?
-  meta->blockGroupsCount = (meta->blockCount < meta->blocksPerGroup) ? 1 : meta->blockCount / meta->blocksPerGroup;
 
-  if(debug)
-    printf("Number of Block Groups: %d...\n", meta->blockGroupsCount);
-  if (meta->blockGroupsCount != 1)
-    return false;
+
+
+}
+
+bool EXT2::parseSuperBlock() {
+  // Attempt to perform any type of inferential or explicit validation using the
+  // specifications given for EXT2. We're mostly looking for inconsistencies here.
+  ext2_super_block *superBlock = imReader->getSuperBlock();
+
+  try {
+    getMetaFileInfo(superBlock);
+  } catch(EXT2_error &e) {
+    throw e;
+  } catch(...) {
+    throw "FileSystemMetaCorruptionDetected";
+  }
+
+
 
   // -- There are various things we need to do based on contents of the Super Block
   // -- Revision determines algorithm for lookup (hash map vs linked list)
@@ -128,8 +158,6 @@ bool EXT2::parseSuperBlock() {
   // --- variable inode sizes
   // --- extended attributesa
   // --- Sparse SuperBlocks
-  meta->rev = superBlock->s_rev_level;
-
   if(debug)
     printf("Revision Level: %d...\n", meta->rev);
 
@@ -144,12 +172,11 @@ bool EXT2::parseSuperBlock() {
     default:
       break;
   }
-
   return true;
 }
 
-void EXT2::printSuperBlock() {
 
+void EXT2::printSuperBlock() {
   ext2_super_block *superBlock = this->imReader->getSuperBlock();
 
   printf("SUPERBLOCK,%d,%d,%d,%d,%d,%d,%d\n",
@@ -204,7 +231,11 @@ void EXT2::printSuperBlock() {
   // }
 }
 
+
 void EXT2::printGroupSummary() {
+  if (groupDescTbl->size() <= 0)
+    throw EXT2_error("EmptyGroupDescriptorTable");
+
   const __u32 GROUP_COUNT = groupDescTbl->size();
   __u32 GS2 = 0; // group number
   __u32 GS3 = 0; // blocks in group
@@ -216,7 +247,7 @@ void EXT2::printGroupSummary() {
   __u32 GS9 = 0; // inode table
 
   for (auto groupDesc : *groupDescTbl) {
-    GS3 = (GS2 == GROUP_COUNT-1) ? blocksInLastGroup() : meta->blocksPerGroup;
+    GS3 = (GS2 == GROUP_COUNT-1) ? meta->blocksInLastGroup : meta->blocksPerGroup;
     GS5 = groupDesc.bg_free_blocks_count;
     GS6 = groupDesc.bg_free_inodes_count;
     GS7 = groupDesc.bg_block_bitmap;
@@ -229,6 +260,9 @@ void EXT2::printGroupSummary() {
 }
 
 void EXT2::printFreeBlockEntries(){
+  if (groupDescTbl->size() <= 0)
+    throw EXT2_error("EmptyGroupDescriptorTable");
+
   const __u32 GROUP_COUNT = groupDescTbl->size();
   __u32 bitmapSize = meta->blocksPerGroup;
   __u32 iters = bitmapSize / MASK_SIZE;
@@ -250,7 +284,7 @@ void EXT2::printFreeBlockEntries(){
     char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
 
     if(index++ == GROUP_COUNT - 1)
-      bitmapSize = blocksInLastGroup();
+      bitmapSize = meta->blocksInLastGroup;
 
     if (debug) {
       printf("-------------------------------------------------- printFreeBlockEntries()\n");
@@ -309,7 +343,7 @@ void EXT2::printFreeInodeEntries(){
       printf("Bitmap Size: %d bits...\n", bitmapSize);
       printf("Bitmap Block Address: %d...\n", bitmapAddr);
       printf("Number of Iterations (8bpi): %d...\n", bitmapSize / MASK_SIZE);
-      printf("--------------------------------------------------/printFreeInodekEntries()\n");
+      printf("--------------------------------------------------/printFreeInodeEntries()\n");
     }
 
     __u8 bitMask = 0x00;
@@ -333,19 +367,16 @@ void EXT2::printFreeInodeEntries(){
   } // END for(auto groupDesc...)
 }
 
+
 void EXT2::printInodeSummary() {
-
   const unsigned INODE_TABLE_BLOCK_COUNT = (meta->inodesPerGroup / (meta->blockSize / meta->inodeSize));
-
   ext2_super_block *superBlock = imReader->getSuperBlock();
 
   for(auto groupDesc : *groupDescTbl) 
   {
     void *inodeBuffer = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
-
     char *inodeBitmap = static_cast<char*>(inodeBuffer); // the inode bitmap is the first block of the buffer
-    ext2_inode *inodeTable = static_cast<ext2_inode*>(inodeBuffer + meta->blockSize); // inode table is 2nd block to end of inodeBuffer
-
+    ext2_inode *inodeTable = static_cast<ext2_inode *>(inodeBuffer + meta->blockSize); // inode table is 2nd block to end of inodeBuffer
     ext2_inode *currentInode;
 
     for(size_t i = 0; i < superBlock->s_inodes_count/8; ++i)
@@ -418,13 +449,29 @@ void EXT2::printInodeSummary() {
 }
 
 
-void EXT2::printDirectoryEntries(){}
+void EXT2::printDirectoryEntries(){
+  __u32 nParentInode = 0;
+  __u32 logicalByteOffset = 0;
+  __u32 nInodeOfRefFile = 0;
+  __u32 entryLength = 0;
+  __u32 nameLength = 0;
+  string name;
+
+  printf("DIRENT,%d,%d,%d,%d,%d,'%s'\n",
+         nParentInode,
+         logicalByteOffset,
+         nInodeOfRefFile,
+         entryLength,
+         nameLength,
+         name.c_str()
+         );
+}
 void EXT2::printIndirectBlockRefs(){}
 
 
-/*PRIVATE*/
+/*PRIVATE -- throws labeled runtime_error*/
 bool EXT2::validateSuperBlock() {
-
+  // Returns true if valid, else false. 
   ext2_super_block *superBlock = this->imReader->getSuperBlock();
 
   // Magic Number Check
@@ -435,9 +482,9 @@ bool EXT2::validateSuperBlock() {
   // The major revision number will inform the DS&A we use to read the FS. Here,
   // we check the revision number and set specific flags that we will use during
   // reading and parsing.
-  __u32 rev = superBlock->s_rev_level;
+  meta->rev = superBlock->s_rev_level;
 
-  switch(rev) {
+  switch(meta->rev) {
     case 0: // Revision 0
       if(superBlock->s_first_ino != EXT2_GOOD_OLD_FIRST_INO)
         return false;
@@ -467,22 +514,72 @@ void EXT2::printDescTable(struct ext2_group_desc gd) {
   printf("Reserved Size: 0x%lx...\n", sizeof(gd.bg_reserved));
 }
 
-int EXT2::blocksInLastGroup() {
-  __u32 size = meta->stat.st_size;
-  __u32 fullGroupsCount = groupDescTbl->size() - 1;
-  __u32 groupSize = meta->blockGroupSize;
+void EXT2::setBlocksInLastGroup() {
+  // --------------------------------------------------
+  // Blocks in last group
+  __u32 fsSize = meta->stat.st_size;
   __u32 blockSize = meta->blockSize;
-  int res = (size - (fullGroupsCount * groupSize)) / blockSize;
+  __u32 groupSize = meta->blockGroupSize;
 
-  if(debug) {
-    printf("-------------------------------------------------- blocksInLastGroup()\n");
-    printf("File Size: %d...\n", size);
-    printf("Number of Full Groups: %d...\n", fullGroupsCount);
-    printf("Group Size: %d...\n", groupSize);
-    printf("Block Size: %d...\n", blockSize);
-    printf("Blocks in Last Group: %d...\n", res);
-    printf("-------------------------------------------------- /blocksInLastGroup()\n");
+  if(fsSize < groupSize || fsSize % groupSize != 0) {
+    // The total number of blocks in the last group may not be equal to the
+    // s_blocks_per_group value found in the Super Block.
+    //
+    // This might happen if:
+    // A) (fs.size < group.size)
+    // B) (fs.size % group.size) != 0
+    //
+    // If that is the case, we can find the total number of blocks in the last
+    // group by finding the residual.
+    if(groupDescTbl->size() <= 0)
+      throw EXT2_error("EmptyGroupDescriptorTable");
+
+    __u32 fullGroupsCount = groupDescTbl->size() - 1; // last group not included
+    int res = (fsSize - (fullGroupsCount * groupSize)) / blockSize;
+
+    if (debug) {
+      printf("------------------------------blocksInLastGroup()\n");
+      printf("File Size: %d...\n", fsSize);
+      printf("Number of Full Groups: %d...\n", fullGroupsCount);
+      printf("Group Size: %d...\n", groupSize);
+      printf("Block Size: %d...\n", blockSize);
+      printf("Blocks in Last Group: %d...\n", res);
+      printf("------------------------------/blocksInLastGroup()\n");
+    }
+
+    meta->blocksInLastGroup = res;
+  } else
+    meta->blocksInLastGroup = meta->blocksPerGroup;
+}
+
+void EXT2::setInodesInLastGroup() {
+  // --------------------------------------------------
+  // Inodes in last group
+  // TODO: verify that this can happen at all...
+}
+
+bool EXT2::setRevisionParameters() {
+  // Checks EXT2 Revision number and sets the appropriate fields that depend on
+  // it.
+  return true;
+}
+
+void EXT2::buildDirectoryTree() {
+  const __u32 REV = meta->rev;
+  const __u32 REVMINOR = meta->revMinor;
+
+  if(REV == 1 || REVMINOR == 0.5) {
+    // Hash Map
+
   }
 
-  return res;
+  else if(REV == 0) {
+    // Linked List
+
+  }
+
+  else {
+    // Invalid Revision
+
+  }
 }

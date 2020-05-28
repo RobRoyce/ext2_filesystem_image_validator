@@ -158,7 +158,7 @@ struct ext2_super_block {
 	 * things it doesn't understand...
 	 */
 	__u32	s_first_ino; 		/* First non-reserved inode */
-	__u16   s_inode_size; 		/* size of inode structure */
+	__u16 s_inode_size; 		/* size of inode structure */
 	__u16	s_block_group_nr; 	/* block group # of this superblock */
 	__u32	s_feature_compat; 	/* compatible feature set */
 	__u32	s_feature_incompat; 	/* incompatible feature set */

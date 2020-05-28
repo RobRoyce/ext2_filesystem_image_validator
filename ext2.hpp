@@ -4,12 +4,14 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <list>
 #include <memory>
 #include <sstream>
 #include <string.h>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <stdexcept>
 #include <vector>
 #include <ctime>
 
@@ -33,6 +35,17 @@ using std::runtime_error;
 using std::unique_ptr;
 using std::vector;
 
+class EXT2_error : public std::exception {
+  using std::exception::what;
+public:
+  explicit EXT2_error(const char *msg) : s_(msg){}
+  explicit EXT2_error(const string &msg) : s_(msg) {}
+  virtual ~EXT2_error () {}
+  virtual const char* what() { return s_.c_str(); }
+ protected:
+  string s_;
+};
+
 // -------------------------------------------------- EXT2
 class EXT2 {
  public:
@@ -51,14 +64,28 @@ class EXT2 {
   void printIndirectBlockRefs();
 
  private:
+  // ~imReader~ provides an interface for file operations
   unique_ptr<ImageReader> imReader = nullptr;
+
+  // ~meta~ contains information about the file system that is not kept in the
+  // file system itself
   unique_ptr<MetaFile> meta = nullptr;
+
+  // ~groupDescTbl~ contains a copy of the /first/ Group Descriptor Table
   unique_ptr<vector<ext2_group_desc>> groupDescTbl;
 
+  // ~dirTree~ contains 
+  unique_ptr<std::list<ext2_dir_entry>> dirTree;
+
   void blockDump(size_t);
-  bool getMetaFileInfo();
+  void buildDirectoryTree(); // throws labeled exception
+  bool setRevisionParameters();
+  void getMetaFileInfo(ext2_super_block*);
   bool getGroupDescTbl();
-  bool validateSuperBlock();
+  bool validateSuperBlock(); // throws labeled runtime_error
   void printDescTable(struct ext2_group_desc);
-  int blocksInLastGroup();
+  void setBlocksInLastGroup();
+  void setInodesInLastGroup();
 };
+
+
