@@ -568,6 +568,10 @@ void EXT2::buildDirectoryTree() {
   const __u32 REV = meta->rev;
   const __u32 REVMINOR = meta->revMinor;
 
+
+  
+
+
   if(REV == 1 || REVMINOR == 0.5) {
     // Hash Map
 

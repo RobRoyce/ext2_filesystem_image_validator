@@ -74,7 +74,12 @@ class EXT2 {
   // ~groupDescTbl~ contains a copy of the /first/ Group Descriptor Table
   unique_ptr<vector<ext2_group_desc>> groupDescTbl;
 
-  // ~dirTree~ contains 
+  //
+  unique_ptr<std::vector<ext2_inode>> inodeTbl;
+
+  unique_ptr<std::vector<ext2_inode *>> inodeDirType;
+
+  // ~dirTree~ contains
   unique_ptr<std::list<ext2_dir_entry>> dirTree;
 
   void blockDump(size_t);
