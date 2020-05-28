@@ -1,17 +1,84 @@
 NAME: Rob Royce, Tyler Hackett
-EMAIL: robroyce1@ucla.edu, tjhacket@ucla.edu
+EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
 ID: 705357270, 405180956
 
 
 List of Included Files
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  - README: this file.
-  - lab3a.cpp
+| File                    | Description                                  |
+|-------------------------+----------------------------------------------|
+| README                  | This file                                    |
+| bufferedimagereader.cpp | Implementation of BufferedImageReader class  |
+| bufferedimagereader.hpp | Declaration of BufferedImageReader class     |
+| ext2.cpp                | Implementation of EXT2 class                 |
+| ext2.hpp                | Declaration of EXT2 class                    |
+| ext2_fs.h               | The header file provided for this assignment |
+| imagereader.cpp         | Implementation of ImageReader class          |
+| imagereader.hpp         | Declaration of ImageReader class             |
+| lab3a.cpp               | Contains the main program for this project   |
+
+
+
+Description of Lab3A
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Note that we opted to complete our assignment in C++ due to the various "nice"
+features it offers over standard C, hence most of this is done in OOP. The core
+functionality of our project was split into 3 parts:
+
+1) Main Program
+2) EXT2 Class
+3) ImageReader Class
+
+The Main program doesn't do much. It parses the command line argument and
+creates an EXT2 object. Once the object is instantiated, Main simply calls
+methods tailored to the specification (one for each type of printout required in
+the spec).
+
+
+EXT2 Class
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+- ImageReader
+- MetaFile
+- A single copy of the entire Group Descriptor Table (stored in std::vector)
+
+Upon construction, the EXT2 Class takes a filename and attempts to open it as if
+it were an EXT2 image. We perform various checks on the incoming
+string/filename, as well as on the image itself. The details of our checks and
+error handling can be found in the "Error Handling" section below. After
+checking the meta data from the image, the constructor proceeds to read the
+Super Block, verifying that certain parameters are met, such as the "magic
+number" assigned to EXT2 images (0xEF53). File reads are performed exclusively
+by the BufferedImageReader class, which is described below.
+
+After retrieving the meta file 'stat' and parsing and validating the Super
+Block, we retrieve a full copy of the Group Descriptor Table and store it in a
+std::vector<ext2_group_desc> object. This allows us to have rapid lookup of the
+various groups (although the spec explicitly said there will only be one group
+in the tests, we felt it would be wise to make it extensible). Successful
+construction of the EXT2 object implies we have successfully read in the image
+file, retrieved its metadata, parsed and validated the Super Block, and
+collected a copy of the Group Descriptor Table in memory.
+
+The rest of the EXT2 methods are dedicated to the extraction of specific data
+fields contained within the file system.
+
+
+
+ImageReader (and BufferedImageReader) Class
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+
+Error Handling
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 References
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 The following resources were instrumental in our research for this project.
-
