@@ -45,8 +45,10 @@ struct MetaFile {
   __u32 inodesPerGroup;
   __u32 blocksPerGroup;
   __u32 blockGroupsCount;
+  __u32 blocksInLastGroup;
   __u32 groupDescBlockSize;
   __u32 rev;
+  __u32 revMinor;
   unsigned long long blockGroupSize;
   struct stat stat;
   std::string filename;
