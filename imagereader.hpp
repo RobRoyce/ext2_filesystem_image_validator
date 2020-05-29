@@ -3,9 +3,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <string>
+#include <memory>
 
 #include "ext2_fs.h"
 #include "metafile.hpp"
+
+using std::shared_ptr;
 
 extern int debug;
 
@@ -15,6 +18,15 @@ extern int debug;
 //
 class ImageReader {
  public:
+
+  // BlockPersistenceType values specify how memory management
+  // will be handled when getBlock() is called.
+  enum class BlockPersistenceType
+  {
+    TEMPORARY, // The returned buffer is valid until the next call to getBlock()
+    SHARED     // The buffer is shared by any calls that request the same block
+  };
+
   ImageReader(MetaFile*);
 
   virtual void init() = 0;
@@ -22,12 +34,12 @@ class ImageReader {
   struct ext2_super_block *getSuperBlock();
 
   /*Returns a buffer containing the raw data from the specified blockIdx*/
-  virtual void *getBlock(size_t blockIdx) = 0;
+  virtual shared_ptr<char[]> getBlock(size_t blockIdx, BlockPersistenceType t = BlockPersistenceType::TEMPORARY) = 0;
 
   /*Returns a buffer containing the raw data from numBlocks contiguous blocks, starting at blockIdx*/
-  virtual void *getBlocks(size_t blockIdx, size_t numBlocks) = 0;
+  virtual shared_ptr<char[]> getBlocks(size_t blockIdx, size_t numBlocks) = 0;
 
-  virtual void *getGroupDescriptor() = 0;
+  virtual shared_ptr<char[]> getGroupDescriptor() = 0;
 
   static const size_t KiB=1024;
 

@@ -16,18 +16,14 @@ BufferedImageReader::BufferedImageReader(MetaFile *metafile) : ImageReader(metaf
     this->readSuperBlock();
 }
 
-BufferedImageReader::~BufferedImageReader() 
-{
-  //delete[] blockBuffer;
-  //delete[] groupDescriptorBuffer;
-}
+BufferedImageReader::~BufferedImageReader() {}
 
 void BufferedImageReader::init()
 {
-    this->blockBuffer = new char[meta->blockSize];
+    this->blockBuffer = shared_ptr<char[]>(new char[meta->blockSize]);
 
     this->multiBlockBufferCount = 8; // Give the multi-block buffer an arbitrary starting count.
-    this->multiBlockBuffer = new char[multiBlockBufferCount * meta->blockSize];
+    this->multiBlockBuffer = shared_ptr<char[]>(new char[multiBlockBufferCount * meta->blockSize]);
 }
 
 int BufferedImageReader::readSuperBlock() {
@@ -53,18 +49,56 @@ int BufferedImageReader::readSuperBlock() {
   return 0;
 }
 
-void *BufferedImageReader::getBlock(size_t blockIdx)
+shared_ptr<char[]> BufferedImageReader::getBlock(size_t blockIdx, BlockPersistenceType t)
 {
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
 
-  fs->seekg(blockIdx * meta->blockSize, std::ios::beg);
-  fs->read(this->blockBuffer, meta->blockSize);
+  shared_ptr<char[]> buffer;
 
-  return this->blockBuffer;
+  switch(t)
+  {
+    case BlockPersistenceType::TEMPORARY:
+
+      buffer = this->blockBuffer;
+      break;
+
+    case BlockPersistenceType::SHARED:
+
+      try {
+
+        weak_ptr<char[]> weakBuf = manualBlockBuffers.at(blockIdx);
+
+        if(weakBuf.expired())
+        {
+          buffer = shared_ptr<char[]>(new char[meta->blockSize]);
+          manualBlockBuffers[blockIdx] = buffer;
+        }
+        else
+        {
+          return weakBuf.lock();
+        }
+
+      } catch(...) {
+
+        buffer = shared_ptr<char[]>(new char[meta->blockSize]);
+        manualBlockBuffers[blockIdx] = buffer;
+
+      }
+
+      break;
+
+    default:
+      throw runtime_error("Unsupported BlockPersistenceType");
+  }
+
+  fs->seekg(blockIdx * meta->blockSize, std::ios::beg);
+  fs->read(buffer.get(), meta->blockSize);
+
+  return buffer;
 }
 
-void *BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
+shared_ptr<char[]> BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
 {
   if (!fs)
     return nullptr; // TODO Throw exception instead of return nullptr
@@ -72,18 +106,17 @@ void *BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
   // Resize our internal buffer if it is not large enough for the request.
   if(numBlocks > multiBlockBufferCount)
   {
-    delete[] multiBlockBuffer;
     multiBlockBufferCount = numBlocks;
-    multiBlockBuffer = new char[multiBlockBufferCount * meta->blockSize];
+    multiBlockBuffer = shared_ptr<char[]>(new char[multiBlockBufferCount * meta->blockSize]);
   }
 
   fs->seekg(blockIdx * meta->blockSize, std::ios::beg);
-  fs->read(this->multiBlockBuffer, numBlocks * meta->blockSize);
+  fs->read(this->multiBlockBuffer.get(), numBlocks * meta->blockSize);
 
   return this->multiBlockBuffer;
 }
 
-void *BufferedImageReader::getGroupDescriptor()
+shared_ptr<char[]> BufferedImageReader::getGroupDescriptor()
 {
    // Only prepare the buffer once.
   if(!groupDescriptorBuffer)
@@ -106,10 +139,10 @@ void *BufferedImageReader::getGroupDescriptor()
       printf("Size (in bytes) of buffer being used: %d...\n", GD_BUFLEN);
     }
 
-    groupDescriptorBuffer = new char[GD_BUFLEN];
+    groupDescriptorBuffer = shared_ptr<char[]>(new char[GD_BUFLEN]);
 
     fs->seekg(DESC_TABLE_BLOCK * meta->blockSize, std::ios::beg);
-    fs->read(groupDescriptorBuffer, DESC_TABLE_SZ);
+    fs->read(groupDescriptorBuffer.get(), DESC_TABLE_SZ);
   }
 
   return groupDescriptorBuffer;

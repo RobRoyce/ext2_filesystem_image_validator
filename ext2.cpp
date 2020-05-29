@@ -40,7 +40,9 @@ EXT2::~EXT2() {}
 bool EXT2::getGroupDescTbl() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
   const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
-  char *buf = static_cast<char*>(this->imReader->getGroupDescriptor());
+
+  shared_ptr<char[]> bufPtr = this->imReader->getGroupDescriptor();
+  char *buf = bufPtr.get();
 
   // buf now contains the entire block group descriptor table
   // create group descriptor entires and append to the vector groupDescTbl
@@ -280,7 +282,9 @@ void EXT2::printFreeBlockEntries(){
   // Block 1 corresponds to bit 0 of byte 0
   for(auto groupDesc : *groupDescTbl) {
     bitmapAddr = groupDesc.bg_block_bitmap;
-    char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
+
+    shared_ptr<char[]> bufPtr = imReader->getBlock(bitmapAddr);
+    char *buf = bufPtr.get();
 
     if(index++ == GROUP_COUNT - 1)
       bitmapSize = meta->blocksInLastGroup;
@@ -335,7 +339,9 @@ void EXT2::printFreeInodeEntries(){
 
   for (auto groupDesc : *groupDescTbl) {
     bitmapAddr = groupDesc.bg_inode_bitmap;
-    char *buf = static_cast<char *>(imReader->getBlock(bitmapAddr));
+    
+    shared_ptr<char[]> bufPtr = imReader->getBlock(bitmapAddr);
+    char *buf = bufPtr.get();
 
     if (debug) {
       printf("--------------------------------------------------printFreeInodeEntries()\n");
@@ -373,7 +379,9 @@ void EXT2::printInodeSummary() {
 
   for(auto groupDesc : *groupDescTbl) 
   {
-    void *inodeBuffer = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
+    shared_ptr<char[]> inodeBufferPtr = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
+
+    void *inodeBuffer = inodeBufferPtr.get();
     char *inodeBitmap = static_cast<char*>(inodeBuffer); // the inode bitmap is the first block of the buffer
     ext2_inode *inodeTable = static_cast<ext2_inode *>(inodeBuffer) + meta->blockSize/meta->inodeSize; // inode table is 2nd block to end of inodeBuffer
     ext2_inode *currentInode;

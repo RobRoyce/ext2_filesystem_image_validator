@@ -1,8 +1,14 @@
 #pragma once
 
 #include <fstream>
+#include <map>
 
 #include "imagereader.hpp"
+
+using std::runtime_error;
+using std::make_shared;
+using std::weak_ptr;
+using std::map;
 
 // -------------------------------------------------- EXT2 Image Reader Class
 //
@@ -19,11 +25,11 @@ class BufferedImageReader : public ImageReader {
 
   struct ext2_super_block *getSuperBlock();
 
-  virtual void *getBlock(size_t blockIdx);
+  virtual shared_ptr<char[]> getBlock(size_t blockIdx, BlockPersistenceType t);
 
-  virtual void *getBlocks(size_t blockIdx, size_t numBlocks);
+  virtual shared_ptr<char[]> getBlocks(size_t blockIdx, size_t numBlocks);
 
-  virtual void *getGroupDescriptor();
+  virtual shared_ptr<char[]> getGroupDescriptor();
 
 protected:
 
@@ -33,11 +39,13 @@ private:
   
   std::ifstream *fs;
 
-  char *blockBuffer = nullptr;
+  shared_ptr<char[]> blockBuffer = nullptr;
 
-  char *groupDescriptorBuffer = nullptr;
+  shared_ptr<char[]> groupDescriptorBuffer = nullptr;
 
-  char *multiBlockBuffer = nullptr;
+  shared_ptr<char[]> multiBlockBuffer = nullptr;
+
+  map<size_t, weak_ptr<char[]>> manualBlockBuffers;
 
   /*The total number of blocks that can fit in the multiBlockBuffer*/
   size_t multiBlockBufferCount;
