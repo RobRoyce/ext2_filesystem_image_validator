@@ -456,7 +456,21 @@ void EXT2::printInodeSummary() {
           }
 
           if(mode == 'd' || mode == 'f') {
-            printIndirectBlockRefs(currentInode, inodeNumber);
+            if(currentInode->i_block[EXT2_IND_BLOCK] != 0)
+            {
+              printIndirectBlockRefs(imReader->getBlock(currentInode->i_block[EXT2_IND_BLOCK], ImageReader::BlockPersistenceType::SHARED), 
+                                     currentInode->i_block[EXT2_IND_BLOCK], 0, inodeNumber, 1);
+            }
+            if(currentInode->i_block[EXT2_DIND_BLOCK] != 0)
+            {
+              printIndirectBlockRefs(imReader->getBlock(currentInode->i_block[EXT2_DIND_BLOCK], ImageReader::BlockPersistenceType::SHARED), 
+                                     currentInode->i_block[EXT2_DIND_BLOCK], 256, inodeNumber, 2);
+            }
+            if(currentInode->i_block[EXT2_TIND_BLOCK] != 0)
+            {
+              printIndirectBlockRefs(imReader->getBlock(currentInode->i_block[EXT2_TIND_BLOCK], ImageReader::BlockPersistenceType::SHARED), 
+                                     currentInode->i_block[EXT2_TIND_BLOCK], 257*256, inodeNumber, 3);
+            }
           }
 
         }
@@ -522,30 +536,27 @@ void EXT2::printDirectoryEntries(){
          );
 }
 
-void EXT2::printIndirectBlockRefs(ext2_inode *inode, size_t inodeNumber)
+void EXT2::printIndirectBlockRefs(shared_ptr<char[]> indBlock, size_t indBlockNum, size_t baseLogicalOffset, size_t inodeNum, size_t level)
 {
-  //Check/scan the SIND block
-  if(inode->i_block[EXT2_IND_BLOCK] != 0)
+  uint32_t *blockIdx = reinterpret_cast<uint32_t*>(indBlock.get());
+  
+  for(size_t i = 0; i < meta->blockSize/4; i++)
   {
-    shared_ptr<char[]> indBlock = imReader->getBlock(inode->i_block[EXT2_IND_BLOCK]);
-    uint32_t *blockIdx = reinterpret_cast<uint32_t*>(indBlock.get());
-    
-    for(size_t i = 0; i < meta->blockSize/4; i++)
+    if(blockIdx[i] != 0)
     {
-      if(blockIdx[i] != 0)
-      {
-        printf("INDIRECT,%lu,%d,%lu,%d,%d\n",
-               inodeNumber,
-               1,
-               EXT2_NDIR_BLOCKS + i,
-               inode->i_block[EXT2_IND_BLOCK],
-               blockIdx[i]
-              );
-      }
+      printf("INDIRECT,%lu,%lu,%lu,%lu,%d\n",
+            inodeNum,
+            level,
+            EXT2_NDIR_BLOCKS + baseLogicalOffset + i,
+            indBlockNum,
+            blockIdx[i]
+            );
+      
+      if(level > 1)
+        printIndirectBlockRefs(imReader->getBlock(blockIdx[i], ImageReader::BlockPersistenceType::SHARED), 
+                               blockIdx[i], baseLogicalOffset, inodeNum, level - 1);
     }
-
   }
-
 }
 
 /*PRIVATE -- throws labeled runtime_error*/
