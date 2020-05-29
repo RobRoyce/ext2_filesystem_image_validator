@@ -19,6 +19,7 @@
 #define SUPERBLOCK_SIZE sizeof(ext2_super_block)
 #define EXT2_OLD_REV 0
 #define EXT2_DYNAMIC_REV 1
+#define IMPOSSIBLE_MALLOC "MemoryAllocationImpossible"
 
 const __u8 MASK = 0xFF;
 const __u32 MASK_SIZE = sizeof(__u8) * 8;
@@ -34,6 +35,7 @@ using std::string;
 using std::runtime_error;
 using std::unique_ptr;
 using std::vector;
+using std::list;
 
 class EXT2_error : public std::exception {
   using std::exception::what;
@@ -62,6 +64,7 @@ class EXT2 {
   void printInodeSummary();
   void printDirectoryEntries();
   void printIndirectBlockRefs();
+  
 
  private:
   // ~imReader~ provides an interface for file operations
@@ -72,21 +75,23 @@ class EXT2 {
   unique_ptr<MetaFile> meta = nullptr;
 
   // ~groupDescTbl~ contains a copy of the /first/ Group Descriptor Table
-  unique_ptr<vector<ext2_group_desc>> groupDescTbl;
+  unique_ptr<vector<ext2_group_desc>> groupDescTbl = nullptr;
 
-  //
-  unique_ptr<std::vector<ext2_inode>> inodeTbl;
 
-  unique_ptr<std::vector<ext2_inode *>> inodeDirType;
+  unique_ptr<ext2_inode> rootInode = nullptr;
+  unique_ptr<vector<ext2_inode>> inodeTbl = nullptr;
+  unique_ptr<vector<ext2_inode *>> inodeDirType = nullptr;
+  unique_ptr<list<ext2_dir_entry>> dirTree = nullptr;
 
-  // ~dirTree~ contains
-  unique_ptr<std::list<ext2_dir_entry>> dirTree;
 
   void blockDump(size_t);
-  void buildDirectoryTree(); // throws labeled exception
+  // void buildDirectoryTree(); // throws labeled exception
   bool setRevisionParameters();
   void getMetaFileInfo(ext2_super_block*);
   bool getGroupDescTbl();
+  void printDirEntry(__u32, __u32, ext2_dir_entry*);
+
+
   bool validateSuperBlock(); // throws labeled runtime_error
   void printDescTable(struct ext2_group_desc);
   void setBlocksInLastGroup();

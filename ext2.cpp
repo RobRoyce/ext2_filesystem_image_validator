@@ -48,8 +48,7 @@ bool EXT2::getGroupDescTbl() {
     groupDescTbl = make_unique<vector<ext2_group_desc>>();
     groupDescTbl->reserve(DESC_TABLE_LEN);
   }
-  catch (...) { throw EXT2_error("MemoryAllocationImpossible"); }
-
+  catch (...) { throw EXT2_error(IMPOSSIBLE_MALLOC); }
 
   for (__u32 i = 0; i < DESC_TABLE_LEN; i++) {
     unique_ptr<ext2_group_desc> tmp = make_unique<ext2_group_desc>();
@@ -442,12 +441,30 @@ void EXT2::printInodeSummary() {
           }
 
           printf("\n");
+
+          // ROBERTO
+          // Print out all of the directory entries
+          if(mode == 'd') {
+            // iterate over and print all directory entries in this directory
+            // use printDirEntry
+          }
+          // ROBERTO
+
         }
       }
     }
   }
 }
 
+void EXT2::printDirEntry(__u32 pInode, __u32 offset, ext2_dir_entry *entry) {
+  printf("DIRENT,%d,%d,%d,%d,%d,'%s'\n",
+         pInode,
+         offset,
+         entry->inode,
+         entry->rec_len,
+         entry->name_len,
+         entry->name);
+}
 
 void EXT2::printDirectoryEntries(){
   __u32 nParentInode = 0;
@@ -488,16 +505,13 @@ bool EXT2::validateSuperBlock() {
     case 0: // Revision 0
       if(superBlock->s_first_ino != EXT2_GOOD_OLD_FIRST_INO)
         return false;
-
       break;
 
     case 1: // Revision 1
       break;
-
     default: // Error
       return false;
   }
-
   return true;
 }
 
@@ -564,26 +578,24 @@ bool EXT2::setRevisionParameters() {
   return true;
 }
 
-void EXT2::buildDirectoryTree() {
-  const __u32 REV = meta->rev;
-  const __u32 REVMINOR = meta->revMinor;
+// void EXT2::buildDirectoryTree() {
+//   if(inodeTbl->size() <= 0 || inodeDirType->size() <= 0)
+//     throw EXT2_error("EmptyInodeTableWhileBuildingDirectoryTree");
+
+//   try {
+//     // allocate N nodes, N == number of directories
+//     dirTree = make_unique<std::list<ext2_dir_entry>>(inodeDirType->size());
+//   } catch (...) {
+//     throw EXT2_error(IMPOSSIBLE_MALLOC);
+//   }
 
 
-  
+//   // Start with rootInode
+//   if(rootInode == nullptr)
+//     throw EXT2_error("UninitializedRootInodePointer");
+
+//   if(!S_ISDIR(rootInode->i_mode))
+//     throw EXT2_error("InvalidRootInodeFileFormat");
 
 
-  if(REV == 1 || REVMINOR == 0.5) {
-    // Hash Map
-
-  }
-
-  else if(REV == 0) {
-    // Linked List
-
-  }
-
-  else {
-    // Invalid Revision
-
-  }
-}
+// }
