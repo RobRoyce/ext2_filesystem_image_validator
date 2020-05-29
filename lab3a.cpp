@@ -53,7 +53,6 @@ int main(int argc, char **argv) {
     ext2->printFreeBlockEntries(); // DONE
     ext2->printFreeInodeEntries(); // DONE
     ext2->printInodeSummary();     // DONE
-    ext2->printDirectoryEntries();
     ext2->printIndirectBlockRefs();
   } catch (runtime_error &e) {
     std::cerr << ERR_RUNTIME << e.what();

@@ -450,28 +450,54 @@ void EXT2::printInodeSummary() {
 
           printf("\n");
 
-          // ROBERTO
           // Print out all of the directory entries
           if(mode == 'd') {
-            // iterate over and print all directory entries in this directory
-            // use printDirEntry
+            printDirInode(currentInode, inodeNumber);
           }
-          // ROBERTO
-
+          
         }
       }
     }
   }
 }
 
-void EXT2::printDirEntry(__u32 pInode, __u32 offset, ext2_dir_entry *entry) {
-  printf("DIRENT,%d,%d,%d,%d,%d,'%s'\n",
-         pInode,
-         offset,
-         entry->inode,
-         entry->rec_len,
-         entry->name_len,
-         entry->name);
+void EXT2::printDirInode(ext2_inode *dirInode, size_t inodeNumber) {
+
+  shared_ptr<char[]> dirBlock;
+  struct ext2_dir_entry *entry;
+  size_t entryOffset = 0;
+  size_t logicalOffset = 0;
+
+  //Scan the direct block references.
+  for(int iBlockIdx = 0; iBlockIdx < 12; iBlockIdx++)
+  {
+
+    dirBlock = imReader->getBlock(dirInode->i_block[iBlockIdx]);
+    entry = reinterpret_cast<ext2_dir_entry*>(dirBlock.get());
+
+    while(entryOffset < dirInode->i_size)
+    {
+      // TODO figure out workaround for this(?)
+      if(entry->rec_len == 0)
+        break;
+
+      if(entry->inode != 0)
+      {
+        printf("DIRENT,%lu,%lu,%d,%d,%d,'%s'\n",
+                inodeNumber,
+                logicalOffset,
+                entry->inode,
+                entry->rec_len,
+                entry->name_len,
+                entry->name);
+
+        logicalOffset += entry->rec_len;
+      }
+
+      entry = reinterpret_cast<ext2_dir_entry*>((char*)entry + entry->rec_len);
+      entryOffset += entry->rec_len;
+    }
+  }
 }
 
 void EXT2::printDirectoryEntries(){

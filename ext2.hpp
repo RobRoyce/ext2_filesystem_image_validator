@@ -89,7 +89,7 @@ class EXT2 {
   bool setRevisionParameters();
   void getMetaFileInfo(ext2_super_block*);
   bool getGroupDescTbl();
-  void printDirEntry(__u32, __u32, ext2_dir_entry*);
+  void printDirInode(ext2_inode*, size_t);
 
 
   bool validateSuperBlock(); // throws labeled runtime_error
