@@ -454,7 +454,11 @@ void EXT2::printInodeSummary() {
           if(mode == 'd') {
             printDirInode(currentInode, inodeNumber);
           }
-          
+
+          if(mode == 'd' || mode == 'f') {
+            printIndirectBlockRefs(currentInode, inodeNumber);
+          }
+
         }
       }
     }
@@ -517,8 +521,32 @@ void EXT2::printDirectoryEntries(){
          name.c_str()
          );
 }
-void EXT2::printIndirectBlockRefs(){}
 
+void EXT2::printIndirectBlockRefs(ext2_inode *inode, size_t inodeNumber)
+{
+  //Check/scan the SIND block
+  if(inode->i_block[EXT2_IND_BLOCK] != 0)
+  {
+    shared_ptr<char[]> indBlock = imReader->getBlock(inode->i_block[EXT2_IND_BLOCK]);
+    uint32_t *blockIdx = reinterpret_cast<uint32_t*>(indBlock.get());
+    
+    for(size_t i = 0; i < meta->blockSize/4; i++)
+    {
+      if(blockIdx[i] != 0)
+      {
+        printf("INDIRECT,%lu,%d,%lu,%d,%d\n",
+               inodeNumber,
+               1,
+               EXT2_NDIR_BLOCKS + i,
+               inode->i_block[EXT2_IND_BLOCK],
+               blockIdx[i]
+              );
+      }
+    }
+
+  }
+
+}
 
 /*PRIVATE -- throws labeled runtime_error*/
 bool EXT2::validateSuperBlock() {

@@ -63,7 +63,6 @@ class EXT2 {
   void printFreeInodeEntries();
   void printInodeSummary();
   void printDirectoryEntries();
-  void printIndirectBlockRefs();
   
 
  private:
@@ -89,7 +88,9 @@ class EXT2 {
   bool setRevisionParameters();
   void getMetaFileInfo(ext2_super_block*);
   bool getGroupDescTbl();
+  
   void printDirInode(ext2_inode*, size_t);
+  void printIndirectBlockRefs(ext2_inode*, size_t);
 
 
   bool validateSuperBlock(); // throws labeled runtime_error

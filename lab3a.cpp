@@ -52,8 +52,7 @@ int main(int argc, char **argv) {
     ext2->printGroupSummary();     // DONE
     ext2->printFreeBlockEntries(); // DONE
     ext2->printFreeInodeEntries(); // DONE
-    ext2->printInodeSummary();     // DONE
-    ext2->printIndirectBlockRefs();
+    ext2->printInodeSummary();
   } catch (runtime_error &e) {
     std::cerr << ERR_RUNTIME << e.what();
     std::cerr.flush();
