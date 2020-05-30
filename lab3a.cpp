@@ -16,10 +16,7 @@
 #define EXBADARG 1
 #define EXCORRUPT 2
 
-
 int debug = 1;
-bool mem_mapped = false;
-
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -35,13 +32,18 @@ int main(int argc, char **argv) {
 
   try {
     ext2 = std::make_unique<EXT2>(argv[1]);
-  } catch (runtime_error &e) {
+  } catch (EXT2_error &e) {
     // All errors that may occur during initialization will be treated
     // as "corruption" errors
     std::cerr << LAB3B_USAGE << endl;
     std::cerr << ERR_INIT  << e.what();
     std::cerr.flush();
-    exit(EXCORRUPT); // TODO proper exit code
+    exit(EXCORRUPT);
+  } catch (...) {
+    std::cerr << LAB3B_USAGE << endl;
+    std::cerr << "lab3a: encountered invalid or unsupported file" << endl;
+    std::cerr.flush();
+    exit(EXCORRUPT);
   }
 
 
@@ -52,13 +54,11 @@ int main(int argc, char **argv) {
     ext2->printGroupSummary();     // DONE
     ext2->printFreeBlockEntries(); // DONE
     ext2->printFreeInodeEntries(); // DONE
-    ext2->printInodeSummary();
+    ext2->printInodeSummary();     // DONE
   } catch (runtime_error &e) {
-    std::cerr << ERR_RUNTIME << e.what();
+    std::cerr << ERR_RUNTIME << e.what() << endl;
     std::cerr.flush();
     exit(EXCORRUPT);
   }
-
-
   return EXSUCCESS;
 }
