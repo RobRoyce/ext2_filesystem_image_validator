@@ -1,7 +1,6 @@
 // NAME: Rob Royce, Tyler Hackett
 // EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
 // ID: 705357270, 405180956
-
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -16,7 +15,7 @@
 #define EXBADARG 1
 #define EXCORRUPT 2
 
-int debug = 1;
+int debug = 0;
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -50,11 +49,11 @@ int main(int argc, char **argv) {
 
   // -------------------------------------------------- Generate Reports
   try {
-    ext2->printSuperBlock();       // DONE
-    ext2->printGroupSummary();     // DONE
-    ext2->printFreeBlockEntries(); // DONE
-    ext2->printFreeInodeEntries(); // DONE
-    ext2->printInodeSummary();     // DONE
+    ext2->printSuperBlock();
+    ext2->printGroupSummary();
+    ext2->printFreeBlockEntries();
+    ext2->printFreeInodeEntries();
+    ext2->printInodeSummary();
   } catch (runtime_error &e) {
     std::cerr << ERR_RUNTIME << e.what() << endl;
     std::cerr.flush();

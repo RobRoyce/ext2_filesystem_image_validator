@@ -1,8 +1,9 @@
+// NAME: Rob Royce, Tyler Hackett
+// EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
+// ID: 705357270, 405180956
 #pragma once
-
 #include <fstream>
 #include <map>
-
 #include "imagereader.hpp"
 
 using std::runtime_error;
@@ -36,7 +37,7 @@ protected:
   virtual int readSuperBlock();
 
 private:
-  
+
   std::ifstream *fs;
 
   shared_ptr<char[]> blockBuffer = nullptr;
