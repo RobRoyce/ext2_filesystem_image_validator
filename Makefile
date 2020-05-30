@@ -23,6 +23,9 @@ default: lab3a
 clean:
 	rm -f $(EXEC) $(DIST)
 
+check: debug
+	bash mkfs.sh
+
 debug: $(MAIN.C)
 	$(CC) $(CFLAGS) -g $(MAIN.C) $(DEPENDENCIES.C) -o $(EXEC) $(LIBS)
 
