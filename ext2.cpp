@@ -16,9 +16,13 @@ EXT2::EXT2(char *filename) {
   // slightly hacky way to use smart pointers with polymorphism (improvements welcomed)
   unique_ptr<ImageReader> base(new BufferedImageReader(meta.get()));
   imReader = std::move(base);
+  if(imReader == nullptr)
+    throw EXT2_error("MemoryAllocationErrorDuringInitialFileSystemRead");
 
-  if (!parseSuperBlock())
-    throw runtime_error("SuperBlockParseError");
+
+  try { parseSuperBlock(); }
+  catch (EXT2_error &e) { throw e; }
+  catch (...) { throw EXT2_error("SuperBlockParseError"); }
 
   imReader->init();
 
@@ -40,9 +44,15 @@ EXT2::~EXT2() {}
 bool EXT2::getGroupDescTbl() {
   // Descriptor Table is located at block 1 if block size is 1KiB, otherwise block 2
   const __u32 DESC_TABLE_LEN = meta->blockGroupsCount;
+  char *buf;
 
-  shared_ptr<char[]> bufPtr = this->imReader->getGroupDescriptor();
-  char *buf = bufPtr.get();
+  try {
+    shared_ptr<char[]> bufPtr = this->imReader->getGroupDescriptor();
+    buf = bufPtr.get();
+  } catch (...) {
+    throw EXT2_error("MalformeOrErroneousDescriptorTable");
+  }
+
 
   // buf now contains the entire block group descriptor table
   // create group descriptor entires and append to the vector groupDescTbl
@@ -95,6 +105,12 @@ void EXT2::getMetaFileInfo(ext2_super_block *sb) {
   // - - (blockSize = 1024 << s_log_block_size)
   //
   // We can use this for validation purposes.
+  if(debug) {
+    printf("File Size: %ld...\n", meta->stat.st_size);
+    printf("Blocks Count: %d...\n", sb->s_blocks_count);
+    printf("Block size: %d...\n", KiB << sb->s_log_block_size);
+  }
+
   __u32 blockSize1 = meta->stat.st_size / sb->s_blocks_count;
   __u32 blockSize2 = KiB << sb->s_log_block_size;
   if (debug)
@@ -143,6 +159,12 @@ bool EXT2::parseSuperBlock() {
   // specifications given for EXT2. We're mostly looking for inconsistencies here.
   ext2_super_block *superBlock = imReader->getSuperBlock();
 
+
+  // Magic Number Check
+  // EXT2 uses the magic number 0xEF53
+  if (superBlock->s_magic != EXT2_SUPER_MAGIC)
+    throw EXT2_error("InvalidSuperBlockMagicNumber");
+
   try {
     getMetaFileInfo(superBlock);
   } catch(EXT2_error &e) {
@@ -164,15 +186,18 @@ bool EXT2::parseSuperBlock() {
 
   switch(meta->rev) {
     case EXT2_OLD_REV:
-
+      meta->inodeSize = EXT2_OLD_INODE_SIZE;
       break;
     case EXT2_DYNAMIC_REV:
       meta->inodeSize = superBlock->s_inode_size;
-
       break;
     default:
       break;
   }
+
+  if(debug)
+    printf("inode size: %d...\n", meta->inodeSize);
+
   return true;
 }
 
@@ -339,7 +364,7 @@ void EXT2::printFreeInodeEntries(){
 
   for (auto groupDesc : *groupDescTbl) {
     bitmapAddr = groupDesc.bg_inode_bitmap;
-    
+
     shared_ptr<char[]> bufPtr = imReader->getBlock(bitmapAddr);
     char *buf = bufPtr.get();
 
@@ -374,7 +399,9 @@ void EXT2::printFreeInodeEntries(){
 
 
 void EXT2::printInodeSummary() {
-  const unsigned INODE_TABLE_BLOCK_COUNT = (meta->inodesPerGroup / (meta->blockSize / meta->inodeSize));
+  const unsigned INODE_TABLE_BLOCK_COUNT =
+      (meta->inodesPerGroup /
+       (meta->blockSize / meta->inodeSize));
   ext2_super_block *superBlock = imReader->getSuperBlock();
 
   for(auto groupDesc : *groupDescTbl) 
@@ -382,8 +409,15 @@ void EXT2::printInodeSummary() {
     shared_ptr<char[]> inodeBufferPtr = imReader->getBlocks(groupDesc.bg_inode_bitmap, 1 + INODE_TABLE_BLOCK_COUNT);
 
     void *inodeBuffer = inodeBufferPtr.get();
-    char *inodeBitmap = static_cast<char*>(inodeBuffer); // the inode bitmap is the first block of the buffer
-    ext2_inode *inodeTable = static_cast<ext2_inode *>(inodeBuffer) + meta->blockSize/meta->inodeSize; // inode table is 2nd block to end of inodeBuffer
+
+    char *inodeBitmap = static_cast<char *>(
+        inodeBuffer); // the inode bitmap is the first block of the buffer
+
+    ext2_inode *inodeTable =
+        static_cast<ext2_inode *>(inodeBuffer) +
+        meta->blockSize /
+            meta->inodeSize; // inode table is 2nd block to end of inodeBuffer
+
     ext2_inode *currentInode;
 
     for(size_t i = 0; i < superBlock->s_inodes_count/8; ++i)
@@ -518,28 +552,10 @@ void EXT2::printDirInode(ext2_inode *dirInode, size_t inodeNumber) {
   }
 }
 
-void EXT2::printDirectoryEntries(){
-  __u32 nParentInode = 0;
-  __u32 logicalByteOffset = 0;
-  __u32 nInodeOfRefFile = 0;
-  __u32 entryLength = 0;
-  __u32 nameLength = 0;
-  string name;
-
-  printf("DIRENT,%d,%d,%d,%d,%d,'%s'\n",
-         nParentInode,
-         logicalByteOffset,
-         nInodeOfRefFile,
-         entryLength,
-         nameLength,
-         name.c_str()
-         );
-}
-
 void EXT2::printIndirectBlockRefs(shared_ptr<char[]> indBlock, size_t indBlockNum, size_t baseLogicalOffset, size_t inodeNum, size_t level)
 {
   uint32_t *blockIdx = reinterpret_cast<uint32_t*>(indBlock.get());
-  
+
   for(size_t i = 0; i < meta->blockSize/4; i++)
   {
     if(blockIdx[i] != 0)
@@ -551,7 +567,7 @@ void EXT2::printIndirectBlockRefs(shared_ptr<char[]> indBlock, size_t indBlockNu
             indBlockNum,
             blockIdx[i]
             );
-      
+
       if(level > 1)
         printIndirectBlockRefs(imReader->getBlock(blockIdx[i], ImageReader::BlockPersistenceType::SHARED), 
                                blockIdx[i], baseLogicalOffset, inodeNum, level - 1);
@@ -563,11 +579,6 @@ void EXT2::printIndirectBlockRefs(shared_ptr<char[]> indBlock, size_t indBlockNu
 bool EXT2::validateSuperBlock() {
   // Returns true if valid, else false. 
   ext2_super_block *superBlock = this->imReader->getSuperBlock();
-
-  // Magic Number Check
-  // EXT2 uses the magic number 0xEF53
-  if(superBlock->s_magic != EXT2_SUPER_MAGIC)
-    return false;
 
   // The major revision number will inform the DS&A we use to read the FS. Here,
   // we check the revision number and set specific flags that we will use during
@@ -645,30 +656,3 @@ void EXT2::setInodesInLastGroup() {
   // TODO: verify that this can happen at all...
 }
 
-bool EXT2::setRevisionParameters() {
-  // Checks EXT2 Revision number and sets the appropriate fields that depend on
-  // it.
-  return true;
-}
-
-// void EXT2::buildDirectoryTree() {
-//   if(inodeTbl->size() <= 0 || inodeDirType->size() <= 0)
-//     throw EXT2_error("EmptyInodeTableWhileBuildingDirectoryTree");
-
-//   try {
-//     // allocate N nodes, N == number of directories
-//     dirTree = make_unique<std::list<ext2_dir_entry>>(inodeDirType->size());
-//   } catch (...) {
-//     throw EXT2_error(IMPOSSIBLE_MALLOC);
-//   }
-
-
-//   // Start with rootInode
-//   if(rootInode == nullptr)
-//     throw EXT2_error("UninitializedRootInodePointer");
-
-//   if(!S_ISDIR(rootInode->i_mode))
-//     throw EXT2_error("InvalidRootInodeFileFormat");
-
-
-// }

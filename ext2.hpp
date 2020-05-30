@@ -19,6 +19,7 @@
 #define SUPERBLOCK_SIZE sizeof(ext2_super_block)
 #define EXT2_OLD_REV 0
 #define EXT2_DYNAMIC_REV 1
+#define EXT2_OLD_INODE_SIZE 128
 #define IMPOSSIBLE_MALLOC "MemoryAllocationImpossible"
 
 const __u8 MASK = 0xFF;
@@ -62,7 +63,7 @@ class EXT2 {
   void printFreeBlockEntries();
   void printFreeInodeEntries();
   void printInodeSummary();
-  void printDirectoryEntries();
+  // void printDirectoryEntries();
   
 
  private:
