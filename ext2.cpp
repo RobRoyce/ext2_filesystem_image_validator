@@ -534,11 +534,12 @@ void EXT2::printDirInode(ext2_inode *dirInode, size_t inodeNumber) {
 
       if(entry->inode != 0)
       {
-        printf("DIRENT,%lu,%lu,%d,%d,%d,'%s'\n",
+        printf("DIRENT,%lu,%lu,%d,%d,%d,'%.*s'\n",
                 inodeNumber,
                 logicalOffset,
                 entry->inode,
                 entry->rec_len,
+                entry->name_len,
                 entry->name_len,
                 entry->name);
 
