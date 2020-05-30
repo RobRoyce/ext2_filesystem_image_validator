@@ -62,13 +62,65 @@ mkfs.ext2 -r 1 -I 256 ./test.img  <<EOF
 y
 EOF
 
-./lab3a test.img
+./lab3a test.img 
 ec4=$?
 
 printf "Exit code: %d\n" $ec4
 printf "Expected code: %d\n\n" 0
 rm -f test.img
 
+
+
+
+# Different inode sizes
+T=5
+echo "--------------------------------------------------Beginning test $T [block.size == 2K, rev 0]"
+dd if=/dev/zero of=./test.img bs=2K count=1K
+mkfs.ext2 -r 0 -b 2048 ./test.img  <<EOF
+y
+EOF
+
+./lab3a test.img 
+ec5=$?
+
+printf "Exit code: %d\n" $ec5
+printf "Expected code: %d\n\n" 0
+rm -f test.img
+
+
+
+
+# Different inode sizes
+T=6
+echo "--------------------------------------------------Beginning test $T [block.size == 3K, rev 1]"
+dd if=/dev/zero of=./test.img bs=3K count=1K
+mkfs.ext2 -r 1 -b 3072 ./test.img  <<EOF
+y
+EOF
+
+./lab3a test.img 
+ec6=$?
+
+printf "Exit code: %d\n" $ec6
+printf "Expected code: %d\n\n" 0
+rm -f test.img
+
+
+
+# Different inode sizes
+T=7
+echo "--------------------------------------------------Beginning test $T [block.size == 4K, rev 0]"
+dd if=/dev/zero of=./test.img bs=4K count=1K
+mkfs.ext2 -r 0 -b 4096 ./test.img  <<EOF
+y
+EOF
+
+./lab3a test.img 
+ec7=$?
+
+printf "Exit code: %d\n" $ec7
+printf "Expected code: %d\n\n" 0
+rm -f test.img
 
 # BLOCK_SIZE=1024
 # BLOCKS_PER_GROUP=1024
