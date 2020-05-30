@@ -128,6 +128,10 @@ shared_ptr<char[]> BufferedImageReader::getGroupDescriptor()
     const __u32 DESC_TABLE_SZ = DESC_TABLE_LEN * GDSIZE; // each GD is 32 bytes
     const unsigned GD_BUFLEN = (GDSIZE * DESC_TABLE_LEN) / sizeof(char);
 
+
+    if(DESC_TABLE_LEN <= 0 || DESC_TABLE_SZ <= 0)
+      throw runtime_error("MalformedDescriptorTable");
+
     if (!fs)
         return nullptr; // TODO Throw exception instead of return nullptr
 
