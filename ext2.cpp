@@ -415,8 +415,7 @@ void EXT2::printInodeSummary() {
 
     ext2_inode *inodeTable =
         static_cast<ext2_inode *>(inodeBuffer) +
-        meta->blockSize /
-            meta->inodeSize; // inode table is 2nd block to end of inodeBuffer
+        meta->blockSize / sizeof(ext2_inode); // inode table is 2nd block to end of inodeBuffer
 
     ext2_inode *currentInode;
 
@@ -429,7 +428,7 @@ void EXT2::printInodeSummary() {
         if((inodeBitmap[i] >> bitIdx) & 0x01)
         {
           size_t inodeNumber = inodeOffset + bitIdx + 1; // Inode number starts at 1, not 0
-          currentInode = &inodeTable[inodeNumber - 1]; 
+          currentInode = reinterpret_cast<ext2_inode*>(((char*)inodeTable) + meta->inodeSize*(inodeNumber - 1)); 
 
           // Skip unallocated inodes
           if((currentInode->i_mode == 0) || (currentInode->i_links_count == 0))
