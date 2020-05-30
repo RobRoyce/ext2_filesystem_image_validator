@@ -54,7 +54,7 @@ int BufferedImageReader::readSuperBlock() {
 shared_ptr<char[]> BufferedImageReader::getBlock(size_t blockIdx, BlockPersistenceType t)
 {
   if (!fs)
-    return nullptr; // TODO Throw exception instead of return nullptr
+    throw runtime_error("BufferedImageReader failed to initialize properly, or never initialized in the first place");
 
   shared_ptr<char[]> buffer;
 
@@ -103,7 +103,7 @@ shared_ptr<char[]> BufferedImageReader::getBlock(size_t blockIdx, BlockPersisten
 shared_ptr<char[]> BufferedImageReader::getBlocks(size_t blockIdx, size_t numBlocks)
 {
   if (!fs)
-    return nullptr; // TODO Throw exception instead of return nullptr
+    throw runtime_error("BufferedImageReader failed to initialize properly, or never initialized in the first place");
 
   // Resize our internal buffer if it is not large enough for the request.
   if(numBlocks > multiBlockBufferCount)
@@ -135,7 +135,7 @@ shared_ptr<char[]> BufferedImageReader::getGroupDescriptor()
       throw runtime_error("MalformedDescriptorTable");
 
     if (!fs)
-        return nullptr; // TODO Throw exception instead of return nullptr
+      throw runtime_error("BufferedImageReader failed to initialize properly, or never initialized in the first place");
 
     if (debug) {
       printf("Group Descriptor Size: %d...\n", GDSIZE);

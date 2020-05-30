@@ -523,15 +523,14 @@ void EXT2::printDirInode(ext2_inode *dirInode, size_t inodeNumber) {
   size_t logicalOffset = 0;
 
   //Scan the direct block references.
-  for(int iBlockIdx = 0; iBlockIdx < 12; iBlockIdx++)
+  for(int blockIdx = 0; blockIdx < 12; blockIdx++)
   {
 
-    dirBlock = imReader->getBlock(dirInode->i_block[iBlockIdx]);
+    dirBlock = imReader->getBlock(dirInode->i_block[blockIdx]);
     entry = reinterpret_cast<ext2_dir_entry*>(dirBlock.get());
 
     while(entryOffset < dirInode->i_size)
     {
-      // TODO figure out workaround for this(?)
       if(entry->rec_len == 0)
         break;
 
@@ -551,6 +550,138 @@ void EXT2::printDirInode(ext2_inode *dirInode, size_t inodeNumber) {
 
       entry = reinterpret_cast<ext2_dir_entry*>((char*)entry + entry->rec_len);
       entryOffset += entry->rec_len;
+    }
+  }
+
+  //Scan the singly indirect block.
+  shared_ptr<char[]> sindBlock = imReader->getBlock(dirInode->i_block[EXT2_IND_BLOCK], ImageReader::BlockPersistenceType::SHARED);
+  int *sindBlockEntries = reinterpret_cast<int*>(sindBlock.get());
+  for(size_t iBlockIdx = 0; iBlockIdx < meta->blockSize/4; iBlockIdx++)
+  {
+    if(sindBlockEntries[iBlockIdx] == 0)
+      continue;
+
+    dirBlock = imReader->getBlock(sindBlockEntries[iBlockIdx]);
+    entry = reinterpret_cast<ext2_dir_entry*>(dirBlock.get());
+
+    while(entryOffset < dirInode->i_size)
+    {
+      if(entry->rec_len == 0)
+        break;
+
+      if(entry->inode != 0)
+      {
+        printf("DIRENT,%lu,%lu,%d,%d,%d,'%.*s'\n",
+                inodeNumber,
+                logicalOffset,
+                entry->inode,
+                entry->rec_len,
+                entry->name_len,
+                entry->name_len,
+                entry->name);
+
+        logicalOffset += entry->rec_len;
+      }
+
+      entry = reinterpret_cast<ext2_dir_entry*>((char*)entry + entry->rec_len);
+      entryOffset += entry->rec_len;
+    }
+  }
+
+  //Scan the doubly indirect block.
+  shared_ptr<char[]> dindBlock = imReader->getBlock(dirInode->i_block[EXT2_DIND_BLOCK], ImageReader::BlockPersistenceType::SHARED);
+  int *dindBlockEntries = reinterpret_cast<int*>(dindBlock.get());
+  for(size_t diBlockIdx = 0; diBlockIdx < meta->blockSize/4; diBlockIdx++)
+  {
+    if(dindBlockEntries[diBlockIdx] == 0)
+      continue;
+
+    sindBlock = imReader->getBlock(dindBlockEntries[diBlockIdx], ImageReader::BlockPersistenceType::SHARED);
+    sindBlockEntries = reinterpret_cast<int*>(sindBlock.get());
+
+    for(size_t iBlockIdx = 0; iBlockIdx < meta->blockSize/4; iBlockIdx++)
+    {
+      if(sindBlockEntries[iBlockIdx] == 0)
+        continue;
+
+      dirBlock = imReader->getBlock(sindBlockEntries[iBlockIdx]);
+      entry = reinterpret_cast<ext2_dir_entry*>(dirBlock.get());
+
+      while(entryOffset < dirInode->i_size)
+      {
+        if(entry->rec_len == 0)
+          break;
+
+        if(entry->inode != 0)
+        {
+          printf("DIRENT,%lu,%lu,%d,%d,%d,'%.*s'\n",
+                  inodeNumber,
+                  logicalOffset,
+                  entry->inode,
+                  entry->rec_len,
+                  entry->name_len,
+                  entry->name_len,
+                  entry->name);
+
+          logicalOffset += entry->rec_len;
+        }
+
+        entry = reinterpret_cast<ext2_dir_entry*>((char*)entry + entry->rec_len);
+        entryOffset += entry->rec_len;
+      }
+    }
+  }
+
+  //Scan the triply indirect block.
+  shared_ptr<char[]> tindBlock = imReader->getBlock(dirInode->i_block[EXT2_TIND_BLOCK], ImageReader::BlockPersistenceType::SHARED);
+  int *tindBlockEntries = reinterpret_cast<int*>(tindBlock.get());
+  for(size_t tiBlockIdx = 0; tiBlockIdx < meta->blockSize/4; tiBlockIdx++)
+  {
+    if(tindBlockEntries[tiBlockIdx] == 0)
+      continue;
+
+    dindBlock = imReader->getBlock(tindBlockEntries[tiBlockIdx], ImageReader::BlockPersistenceType::SHARED);
+    dindBlockEntries = reinterpret_cast<int*>(dindBlock.get());
+
+    for(size_t diBlockIdx = 0; diBlockIdx < meta->blockSize/4; diBlockIdx++)
+    {
+      if(dindBlockEntries[diBlockIdx] == 0)
+        continue;
+
+      sindBlock = imReader->getBlock(dindBlockEntries[diBlockIdx], ImageReader::BlockPersistenceType::SHARED);
+      sindBlockEntries = reinterpret_cast<int*>(sindBlock.get());
+
+      for(size_t iBlockIdx = 0; iBlockIdx < meta->blockSize/4; iBlockIdx++)
+      {
+        if(sindBlockEntries[iBlockIdx] == 0)
+          continue;
+
+        dirBlock = imReader->getBlock(sindBlockEntries[iBlockIdx]);
+        entry = reinterpret_cast<ext2_dir_entry*>(dirBlock.get());
+
+        while(entryOffset < dirInode->i_size)
+        {
+          if(entry->rec_len == 0)
+            break;
+
+          if(entry->inode != 0)
+          {
+            printf("DIRENT,%lu,%lu,%d,%d,%d,'%.*s'\n",
+                    inodeNumber,
+                    logicalOffset,
+                    entry->inode,
+                    entry->rec_len,
+                    entry->name_len,
+                    entry->name_len,
+                    entry->name);
+
+            logicalOffset += entry->rec_len;
+          }
+
+          entry = reinterpret_cast<ext2_dir_entry*>((char*)entry + entry->rec_len);
+          entryOffset += entry->rec_len;
+        }
+      }
     }
   }
 }
