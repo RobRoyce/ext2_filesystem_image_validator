@@ -3,7 +3,6 @@
 // ID: 705357270, 405180956
 #include "bufferedimagereader.hpp"
 #include <sys/types.h>
-#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <string>

@@ -3,7 +3,6 @@
 // ID: 705357270, 405180956
 #include "imagereader.hpp"
 #include "metafile.hpp"
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>

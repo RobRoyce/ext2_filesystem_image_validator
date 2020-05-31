@@ -1,10 +1,11 @@
 #NAME: Robert Ristine, Tyler Hackett
 #EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
 #ID: 705357270,405180956
-.PHONY: mount clean dist
+.PHONY: clean dist
 
 CC = g++
 CFLAGS = -Wall -Wextra -std=gnu++17
+DFLAGS = -g
 DEPENDENCIES.C = ext2.cpp imagereader.cpp bufferedimagereader.cpp
 DIST = lab3a-705357270.tar.gz
 MAIN.C = lab3a.cpp
@@ -13,17 +14,10 @@ FILES = README bufferedimagereader.cpp bufferedimagereader.hpp ext2.cpp ext2.hpp
 EXEC = lab3a
 LIBS = -static-libstdc++
 
-CFLAGS = -Wall -Wextra
-DFLAGS = -g
-
 default: lab3a
 
 clean:
 	rm -f $(EXEC) $(DIST)
-
-check: debug
-	bash mkfs.sh
-	cat ./log.out | grep -A 5 -B 5 -E "(DIR|SUPER|GROUP|lab3a)"
 
 debug: $(MAIN.C)
 	$(CC) $(CFLAGS) -g $(MAIN.C) $(DEPENDENCIES.C) -o $(EXEC) $(LIBS)
