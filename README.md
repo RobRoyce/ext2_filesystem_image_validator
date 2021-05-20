@@ -1,30 +1,14 @@
-NAME: Rob Royce, Tyler Hackett
-EMAIL: robroyce1@ucla.edu, tjhackett@ucla.edu
-ID: 705357270, 405180956
+# EXT2 Filesystem Image Validator
 
+This project is based on an assignment for UCLA's undergraduate-level course -- Operating Systems Principles. 
+The project objectives include:
 
-List of Included Files
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-| File                    | Description                                                                  | Header Check |
-|-------------------------+------------------------------------------------------------------------------+--------------|
-| README                  | This file                                                                    | DONE         |
-| bufferedimagereader.cpp | Implementation of BufferedImageReader class                                  | DONE         |
-| bufferedimagereader.hpp | Declaration of BufferedImageReader class                                     | DONE         |
-| ext2.cpp                | Implementation of EXT2 class                                                 | DONE         |
-| ext2.hpp                | Declaration of EXT2 class (contains data structures and methods to           | DONE         |
-| ext2_fs.h               | The header file provided for this assignment                                 | DONE         |
-| imagereader.cpp         | Implementation of ImageReader class                                          | DONE         |
-| imagereader.hpp         | Declaration of ImageReader class                                             | DONE         |
-| lab3a.cpp               | Contains the main program for this project                                   | DONE         |
-| Makefile                | Contains targets lab3a, clean, dist and a few other convenience targets      | DONE         |
-| metafile.hpp            | Contains the MetaFile class used for storing meta data about the file system | DONE         |
+- Reinforce the basic filesystem concepts of directory objects, file objects, and free space.
+- Gain experience researching, examining, interpreting and processing information
 
+# Details
 
-Description of Lab3A
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Note that we opted to complete our assignment in C++ due to the various "nice"
-features it offers over standard C, hence most of this is done in OOP. The core
-functionality of our project was split into 3 parts:
+The project is split into the following major components:
 
 1) Main Program
 2) EXT2 Class
@@ -36,7 +20,7 @@ methods tailored to the specification (one for each type of printout required in
 the spec).
 
 
-EXT2 Class
+## EXT2 Class
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 - contains :ImageReader:
 - contains :MetaFile:
@@ -64,7 +48,7 @@ The rest of the EXT2 methods are dedicated to the extraction of specific data
 fields contained within the file system.
 
 
-ImageReader (and BufferedImageReader) Class
+## ImageReader (and BufferedImageReader) Class
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 The ImageReader parent class and BufferedImageReader sub-class are designed to
 abstract disk reads from the higher level EXT2 class. It provides methods to
@@ -72,7 +56,7 @@ retrieve individual blocks or ranges of blocks. It also maintains a copy of the
 superblock and group descriptor table in memory.
 
 
-Error Handling
+# Error Handling
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 We employed the try/catch mechanisms of C++ to deal with errors. The main
 program (lab3a) contains two such try/catch blocks, the first of which deals

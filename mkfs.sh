@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-# NAMES HERE TODO
-# EMAILS HERE
-# IDS HERE
-
 log="log.out"
 
 echo "Beginning Test Suite..."
