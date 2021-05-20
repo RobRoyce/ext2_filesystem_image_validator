@@ -4,7 +4,10 @@ This project is based on an assignment for UCLA's undergraduate-level course -- 
 The project objectives include:
 
 - Reinforce the basic filesystem concepts of directory objects, file objects, and free space.
-- Gain experience researching, examining, interpreting and processing information
+- Gain experience researching, examining, interpreting and processing information in complex binary data structures.
+- Gain experience with examining interpreted and raw hex dumps of complex data structures as a means of 
+  developing an understanding of those data structures.
+  - Gain practical experience with typical on-disk file system data formats.
 
 # Details
 
