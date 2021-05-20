@@ -63,17 +63,17 @@ try/catch block deals with dynamic issues, such as corrupt data.
 
 
 Summary of Block Size Impact
-| Limits       | 1KiB          | 2KiB      | 4KiB       | 8KiB       |
-|--------------+---------------+-----------+------------+------------|
-| FSBlocks     | 2,147,483,647 | =         | =          | =          |
-| BlksPerBG    | 8192          | 16348     | 32768      | 65536      |
-| InodesPerBG  | ^             | ^         | ^          | ^          |
-| BytesPerBG   | 8MiB          | 32MiB     | 128MiB     | 512MiB     |
-| FSSizeReal   | 4TiB          | 8TiB      | 16TiB      | 32TiB      |
-| FSSizeLnx    | 2TiB          | 8TiB      | 16TiB      | 32TiB      |
-| BlksPerFile  | 16843020      | 134217728 | 1074791436 | 8594130956 |
-| FileSizeReal | 16GiB         | 256GiB    | 2TiB       | 2TiB       |
-| FileSizeLnx  | 16GiB         | 256GiB    | 2TiB       | 2TiB       |
+    | Limits       | 1KiB          | 2KiB      | 4KiB       | 8KiB       |
+    |--------------+---------------+-----------+------------+------------|
+    | FSBlocks     | 2,147,483,647 | =         | =          | =          |
+    | BlksPerBG    | 8192          | 16348     | 32768      | 65536      |
+    | InodesPerBG  | ^             | ^         | ^          | ^          |
+    | BytesPerBG   | 8MiB          | 32MiB     | 128MiB     | 512MiB     |
+    | FSSizeReal   | 4TiB          | 8TiB      | 16TiB      | 32TiB      |
+    | FSSizeLnx    | 2TiB          | 8TiB      | 16TiB      | 32TiB      |
+    | BlksPerFile  | 16843020      | 134217728 | 1074791436 | 8594130956 |
+    | FileSizeReal | 16GiB         | 256GiB    | 2TiB       | 2TiB       |
+    | FileSizeLnx  | 16GiB         | 256GiB    | 2TiB       | 2TiB       |
 
 
 # References
