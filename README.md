@@ -21,7 +21,6 @@ the spec).
 
 
 ## EXT2 Class
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 - contains :ImageReader:
 - contains :MetaFile:
 - contains :vector<> groupDescTbl:
@@ -49,7 +48,6 @@ fields contained within the file system.
 
 
 ## ImageReader (and BufferedImageReader) Class
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 The ImageReader parent class and BufferedImageReader sub-class are designed to
 abstract disk reads from the higher level EXT2 class. It provides methods to
 retrieve individual blocks or ranges of blocks. It also maintains a copy of the
@@ -57,7 +55,6 @@ superblock and group descriptor table in memory.
 
 
 # Error Handling
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 We employed the try/catch mechanisms of C++ to deal with errors. The main
 program (lab3a) contains two such try/catch blocks, the first of which deals
 with initial memory allocation and file system initialization. Once the file
@@ -66,7 +63,6 @@ try/catch block deals with dynamic issues, such as corrupt data.
 
 
 Summary of Block Size Impact
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 | Limits       | 1KiB          | 2KiB      | 4KiB       | 8KiB       |
 |--------------+---------------+-----------+------------+------------|
 | FSBlocks     | 2,147,483,647 | =         | =          | =          |
@@ -80,8 +76,7 @@ Summary of Block Size Impact
 | FileSizeLnx  | 16GiB         | 256GiB    | 2TiB       | 2TiB       |
 
 
-References
-++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# References
 The following resources were instrumental in our research for this project.
 
 EXT2 Internal Layout
